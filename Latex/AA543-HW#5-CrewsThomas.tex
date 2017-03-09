@@ -40,21 +40,69 @@
 \begin{document}
 \maketitle
 
-\section{Problem}
-	\subsection{2D Euler equations}
+\section{Definition of problem}
+Solve numerically the 2D Euler equations for the transonic flow over a NACA 0012 airfoil using the Jameson scheme (Jameson et al., AIAA 1981).  
+
+\noindent The following conditions are given:
+\begin{itemize}
+	\item Angle of attack $\alpha = 0 \deg$
+	\item Free-stream Mach number $M_\infty = 0.85$
+\end{itemize}
+
+\noindent These further free-stream conditions are defined given an altitude of 10 km as per the Standard Atmosphere Table 1976.
+\begin{itemize}
+	\item $\gamma \approx 1.4$
+	\item Density $\rho_\infty = 0.414 \; \text{kg/m}^3$ 
+	\item Temperature $T_\infty = 223.3 $ K
+	\item Pressure $p_\infty = 26.5 $ kPa
+	\item Sound speed $c_\infty = \sqrt{\gamma \frac{p_\infty}{\rho_\infty}} = 299 \approx 300 $ m/s
+	\item Velocity $|\vec{u}_\infty| = M_\infty c_\infty = 255$ m/s. 
 	
+	Therefore $u_\infty = |\vec{u}_\infty| \cos\alpha = 255$ m/s and  $v_\infty = |\vec{u}_\infty| \sin\alpha = 0$ m/s.
+	\item Energy $E_\infty = e + \frac{|\vec{u}_\infty|^2}{2}$ where $e = \frac{p_\infty}{\rho_\infty (\gamma -1)} $. The free-steam energy is then $E_\infty = 193 $ J
+\end{itemize}
+
+\section{Development of the numerical scheme}
+	\subsection{Grid}
+	Grid created in Homework \#3.
+	
+	(Copy calcs for cell center point, area and cell wall normals from notes)
+	
+	\subsection{Normalization (??)}
+	(Normalize to free-stream values?)
+	
+	\subsection{Initial conditions}
+	Initial conditions will be the same as the free-stream values, for all points in the domain.
+		\begin{align}
+		U_{i,j}^0 = \begin{bmatrix}
+		\rho_\infty \\ \rho_\infty u_\infty \\ \rho_\infty v_\infty \\ \rho_\infty E_\infty
+		\end{bmatrix}
+		\end{align}
+	
+	\subsection{Boundary conditions}
+	
+	
+	\subsection{Spacial discretization of 2D Euler equations with Jameson scheme}
+	(copy from notes)
+	
+	\subsection{Temporal discretization with Runge-Kutta 4 step time integration scheme}
+	(copy from notes)
+	
+	\subsection{Determining convergence to steady state condition}
+
+\section{Results \& Analysis}	
 		
 	
 \subsection{Bonus}
-	\subsubsection{Artificial viscosity}
+
 	
 	
 
 \pagebreak
 \appendix
 \section{Code}
-	\subsection{maccormack.cc}
-%		\lstinputlisting[language=C++]{../code/maccormack.cc}
+	\subsection{2d\_euler\-jameson.cc}
+%		\lstinputlisting[language=C++]{../code/2d_euler_jameson.cc}
 		
 	
 

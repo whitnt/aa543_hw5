@@ -69,11 +69,25 @@ void writeCellCentPoints(const std::vector<std::vector<double> > &x,
     }
 }
 
-void computeCellAreas()
+void computeCellAreas(std::vector<std::vector<double>> &omega,
+                        const std::vector<std::vector<double> > grid_x,
+                        const std::vector<std::vector<double> > grid_y
+                        )
 {
-    // Uses grid points to calculate cell areas 
+    // Uses grid points to calculate cell areas by takeing cross product of diags
     // Indexing of areas matches cell center points
-    // omega[i][j] = 
+    int I_max = omega.size();
+    int J_max = omega[0].size();
+    
+    for (int i=0; i<I_max;i++) {
+        for (int j=0; j<J_max-1;j++) {
+            double a = x[i+1][j+1] - x[i][j];
+            double b = x[i+1][j] - x[i][j+1];
+            double c = y[i+1][j+1] - y[i][j];
+            double d = y[i+1][j] - y[i][j+1];
+            omega[i][j] = 0.5*(a*d - b*c)
+        }
+    }
 }
 
 void computeCellNormals()

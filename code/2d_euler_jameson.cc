@@ -35,6 +35,25 @@ void readGrid(std::vector<std::vector<double> > &grid_x,
     }
 }
 
+void readConvergedGrid(std::vector<std::vector<double> > &grid_x,
+                std::vector<std::vector<double> > &grid_y,
+                const int N_row, const int N_col)
+{
+    // Reads grid points from grid_x.dat and grid_y.dat file
+    std::ifstream x_file("converged_grid_x.dat");
+    std::ifstream y_file("converged_grid_y.dat");
+    
+    float x, y;
+    for (int j=0; j<N_col;j++) {
+        for (int i=0; i<N_row;i++) {
+            x_file >> x;
+            y_file >> y;
+            grid_x[i][j] = x;
+            grid_y[i][j] = y;
+        }
+    }
+}
+
 void createCellCentPoints(  std::vector<std::vector<double> > &x,
                             std::vector<std::vector<double> > &y,
                             const std::vector<std::vector<double> > grid_x,
@@ -85,7 +104,7 @@ void computeCellAreas(std::vector<std::vector<double>> &omega,
             double b = x[i+1][j] - x[i][j+1];
             double c = y[i+1][j+1] - y[i][j];
             double d = y[i+1][j] - y[i][j+1];
-            omega[i][j] = 0.5*(a*d - b*c)
+            omega[i][j] = 0.5*std::abs(a*d - b*c);
         }
     }
 }
@@ -93,8 +112,8 @@ void computeCellAreas(std::vector<std::vector<double>> &omega,
 void computeCellNormals()
 {
     // Uses grid points to calculate cell face normals
-    //      Face 0 -> dsx[i][j][0] = 
-    //      Face 1 -> dsy[i][j][1] = 
+    //       dsx[i][j] = 
+    //       dsy[i][j] = 
 }
 
 void setIC()

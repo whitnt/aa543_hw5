@@ -1,5 +1,5 @@
 """ 
-AA543 - CFD, HW#3, Winter 2017
+AA543 - CFD, HW#5, Winter 2017
 
 Plots grids
 """

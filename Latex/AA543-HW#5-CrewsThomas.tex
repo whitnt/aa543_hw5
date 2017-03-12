@@ -80,8 +80,49 @@ Solve numerically the 2D Euler equations for the transonic flow over a NACA 0012
 		\end{align}
 	
 	\subsection{Boundary conditions}
+		\subsubsection{Outer boundary}
+		The outer boundary conditions will be a subsonic ($M_\infty=0.85$) laminar flow in the $\hat{x}$ direction.  Because the boundary is circular, and some regions will be inflow, and some outflow, the boundary condition applied will depend on the orientation of the boundary cell normals to the fluid velocity $\vec{u} \cdot \hat{n}$.
+		\subsubsection*{Subsonic inflow, $\vec{u} \cdot \hat{n} > 0$}
+		We have the following requirements
+			\begin{align}
+			\vec{u}_{nB} = \vec{u}_{i,M+1} \cdot \hat{n}_{i,M} = \frac{R_{i,M+1}^+ \cdot \hat{n}_{i,M} + R_{i,M}^- \cdot \hat{n}_{i,M}}{2} \\
+			\vec{u}_{i,M+1} \cdot \hat{l}_{i,M} = \vec{u}_\infty \cdot \hat{\ell}_{i,M} \\
+			s_{i,M+1} = s_\infty 
+			\end{align}
+		\subsubsection*{Subsonic outflow, $\vec{u} \cdot \hat{n} < 0$}
+		
+		\subsubsection{Air foil boundary}
+		Along the air foil, there will be a no slip boundary, and normal velocity $u_n = 0$. Density, pressure, energy and transverse velocity will be extrapolated linearly from the interior.
+			\begin{align}
+			U_{i,0-1} = \begin{bmatrix}
+			\tilde{\rho} \\ \tilde{\rho} \tilde{\tilde{u}} \\ \tilde{\rho} \tilde{\tilde{v}} \\ \tilde{\rho} \tilde{E}
+			\end{bmatrix}_{i,0-1}
+			\end{align}
+		Where the $\tilde{\tilde{u}}$ and $\tilde{\tilde{v}}$ contain the extrapolated transverse velocity and an equal but opposite normal velocity to the cell inside the boundary
+			\begin{align}
+			\tilde{\tilde{u}}_{i,-1} = (-[u\hat{x} + v\hat{y}]_{i,0} \hat{n}_{i,-1} + [\tilde{u}\hat{x} + \tilde{v}\hat{y}]_{i,-1} \hat{\ell}_{i,-1}) \cdot \hat{x} \\
+			\tilde{\tilde{v}} _{i,-1} = (-[u\hat{x} + v\hat{y}]_{i,0} \hat{n}_{i,-1} + [\tilde{u}\hat{x} + \tilde{v}\hat{y}]_{i,-1} \hat{\ell}_{i,-1}) \cdot \hat{y}
+			\end{align}
+		The normal unit vectors $\hat{n}_{i,j}$ points in the same direction as the boundary wall normal vector 
+			\begin{align}
+			\hat{n}_{i,-1} = \vec{s}_{i,j}^J/\Omega_{i,j}
+			\end{align}
+		and the transverse unit vector $\hat{\ell}_{i,j}$ is the normal vector rotated $90 \degree$ in the clockwise direction. 
+			\begin{align}
+			\hat{\ell}_{i,-1} =  R(90 \degree) \hat{n}_{i,-1} = \begin{bmatrix} 0 & 1 \\ -1 & 0 \end{bmatrix} \hat{n}_{i,-1}
+			\end{align}
 	
-	
+		For extrapolated values in ghost cells for density, transverse velocity, and energy, the following equation is used (here $q$ is an arbitrary scalar variable)
+			\begin{align}
+			\tilde{q}_{i,-1} = ax_{i,-1} + by_{i,-1} + c
+			\end{align}
+		Where the coefficients $a, b$ and $c$ are found using a linear least squares fit on $q_{i,0}, q_{i,1}$ and $q_{i,2}$.
+		
+		\subsubsection{Boundaries along O-mesh slice}
+		These boundaries will be periodic. There is no need for ghost cells as
+			\begin{align}
+			U_{-1,j} = U_{N-1,j}; \quad U_{N+1,j} = U_{0,j}
+			\end{align}
 	\subsection{Spacial discretization of 2D Euler equations with Jameson scheme}
 	(copy from notes)
 	

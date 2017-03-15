@@ -171,8 +171,39 @@ void writeOutput(const std::vector<std::vector<std::vector<double> > > &u)
     }
 }
 
-void RK1()
+void spaceInt()
 {
+    // 
+}
+
+void tempInt(const std::vector<std::vector<std::vector<double> > > &u,
+            const std::vector<std::vector<std::vector<double> > > &r,
+            const std::vector<std::vector<double> > &omega,
+            const std::vector<std::vector<double> > &dsi_x,
+            const std::vector<std::vector<double> > &dsi_y,
+            const std::vector<std::vector<double> > &dsj_x,
+            const std::vector<std::vector<double> > &dsj_y,
+            const double alpha,
+            std::vector<std::vector<std::vector<double> > > &u_new)
+{
+    // Computes RK step given variable vector u, residual from spacial 
+    // integrator r, a local time step (calculated here) and RK step weight alpha.
+    
+    // Calculate local time step
+    double cfl = 2.8;
+    std::vector<std::vector> > dt(omega);
+    std::fill(dt.begin(), dt.end(), 0);
+    for (int i; i<dt.size; i++){
+        for (int j; j<dt[0].size(); j++) {
+            double dsi_x_avg = 0.5*(dsi_x[i][j] + dsi_x[i+1][j]);
+            double dsi_y_avg = 0.5*(dsi_y[i][j] + dsi_y[i+1][j]);
+            double dsj_x_avg = 0.5*(dsi_x[i][j] + dsi_x[i][j+1]);
+            double dsj_y_avg = 0.5*(dsi_y[i][j] + dsi_y[i][j+1]);
+            
+            dt[i][j] = cfl*(omega[i][j])/(std::abs()+std::abs());
+        }
+    }
+    // Calculate RK step
     
 }
 
@@ -253,9 +284,55 @@ int main()
     setIC(u, rho_0, u_0, v_0, E_0);
     writeOutput(u);
     
-    // Run sim
+    // Run sim (Using standard RK4 in time and Jameson artifical viscosty in space)
+    double R = 1.0;
+    while (R > 1.0e-6) {
+        // Create copies of u for RK steps, plus an r to store residuals;
+        std::vector< std::vector< std::vector<double> > > u_1(u);
+        std::vector< std::vector< std::vector<double> > > u_2(u);
+        std::vector< std::vector< std::vector<double> > > u_3(u);
+        std::vector< std::vector< std::vector<double> > > u_4(u);
+        std::vector< std::vector< std::vector<double> > > r(u);
+        
+        // First RK step
+        // Calculate residual
+        spaceInt(u, omega, dxi_x, dsi_y, dsj_x, dsj_y, r); 
+        // Calculate first RK step
+        double alpha = 0.25;
+        tempInt(u, r, omega, dxi_x, dsi_y, dsj_x, dsj_y, alpha, u_1);
+        
+        // Second RK step
+        // Calculate residual using u_1
+        spaceInt(u_1, omega, dxi_x, dsi_y, dsj_x, dsj_y, r); 
+        // Calculate RK step
+        alpha = 1./3.;
+        tempInt(u, r, omega, dxi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
+        
+        // Third RK step
+        // Calculate residual using u_2
+        spaceInt(u_2, omega, dxi_x, dsi_y, dsj_x, dsj_y, r); 
+        // Calculate RK step
+        alpha = 0.5;
+        tempInt(u, r, omega, dxi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
+        
+        // Fourth RK step
+        // Calculate residual using u_3
+        spaceInt(u_3, omega, dxi_x, dsi_y, dsj_x, dsj_y, r); 
+        // Calculate RK step
+        alpha = 1.;
+        tempInt(u, r, omega, dxi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);
+        
+        // Apply boundary conditions
+        applyBC(u_4);
+        
+        // Update original vector u
+        
+        // Calculate total residual
+        
+        
+    }
     
-    
+    writeOutput(u);
     
     return 0;
 }

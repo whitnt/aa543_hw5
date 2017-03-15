@@ -128,10 +128,10 @@ Solve numerically the 2D Euler equations for the transonic flow over a NACA 0012
 			\begin{enumerate}
 				\item Riemann invariants $R_n^\pm$ are constant along path $\vec{u} + c\hat{n}$.
 				\item Riemann invariant $u_\ell$ is constant in direction $\hat{n}$.
-				\item Enthalpy $H$ or entropy $S$ is constant (conservation of energy).
+				\item Enthalpy $H$ or entropy $S$ is constant (conservation of energy in a steady flow).
 			\end{enumerate}
 			
-		 Because the boundary is circular, and some regions will be inflow, and some outflow, the information used to satisfy the conditions above at the ghost cells will either come from given free-stream values (physical conditions) or from the interior (numerical boundary conditions).  the boundary condition applied will depend on the orientation of the boundary cell unit normals $\hat{n}$ (by convention pointing in) to the fluid velocity $\vec{u}$.
+		 Because the boundary is circular, and some regions will be inflow, and some outflow, the information used to satisfy the conditions above at the ghost cells will either come from given free-stream values (physical conditions) or from the interior (numerical boundary conditions).  The boundary condition applied will depend on the orientation of the boundary cell unit normals $\hat{n}$ (by convention pointing in) to the fluid velocity $\vec{u}$.
 		
 		\subsubsection*{Subsonic inflow, $\vec{u} \cdot \hat{n} > 0$}
 		In the subsonic inflow case, $R_{nB}^+$ (where $B$ indicates the ghost cell) is coming from the exterior (physical boundary condition), and $R_{nB}^-$ is coming from the interior (numerical boundary condition). 
@@ -175,7 +175,7 @@ Solve numerically the 2D Euler equations for the transonic flow over a NACA 0012
 			\end{align}
 		{\color{red} Not sure why in the interior/exterior are not reversed here from the inflow boundary, but is how it is written in the notes. Will see if it causes problems in the implementation.}
 		\subsubsection{Air foil boundary}
-		Along the air foil, there will be a no slip boundary, and normal velocity $u_n = 0$. Density, pressure, energy and transverse velocity will be extrapolated linearly from the interior.
+		Along the air foil, there will be a free slip boundary, and normal velocity $u_n = 0$. Density, pressure, energy and transverse velocity will be extrapolated linearly from the interior.
 			\begin{align}
 			U_{i,0-1} = \begin{bmatrix}
 			\tilde{\rho} \\ \tilde{\rho} \tilde{\tilde{u}} \\ \tilde{\rho} \tilde{\tilde{v}} \\ \tilde{\rho} \tilde{E}

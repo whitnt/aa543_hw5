@@ -126,7 +126,6 @@ void computeCellNormals(std::vector<std::vector<double> > &dsi_x,
 	  dsi_y[i][j] = -1.0*(grid_x[i+1][j] - grid_x[i][j]); // Modified w/ -1
 	  dsj_x[i][j] = (grid_y[i][j+1] - grid_y[i][j]);
 	  dsj_y[i][j] = -1.0*(grid_x[i][j+1] - grid_x[i][j]); // Modified w/ -1
-	  
         }
     }
 }
@@ -244,11 +243,20 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
 		   std::vector<std::vector<double> > &dsj_x,
 		   std::vector<std::vector<double> > &dsj_y,
 		   const int &N_row,
-		   const int &N_col) {
+		   const int &N_col,
+		   const double &u_0,
+		   const double &c_0) {
   
-  // Loop over the upper row of grid
-  double s = 0.; // sign of u dot n
-  double norm = 0; // For normalizing
+  ///// Loop over the upper row of grid
+  // Initialize
+  double uin = 0.; // sign of u dot n
+  double uvel = 0.;
+  double vvel = 0.; 
+  double norm = 0.; // For normalizing
+  double R_inf = 0.; // infty
+  double R_int = 0.; // interior
+  double ci = 0.; // interior sound speed
+  int 
   
   for (int i = 0; i < N_col; i++) {
     // Normalize "i" unit vectors
@@ -258,14 +266,23 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     ny = dsi_y[i][N_row - 1]/norm;
     
     // Check for inflow or outflow
-    uvel = u[1][i][N_row - 1];
-    vvel = v[1][i][N_row - 1];
-    // Compute u dot n
-    s = uvel*nx + vvel*ny;
+    uvel = u[1][i][N_row - 1]/u[0][i][N_row - 1];
+    vvel = u[2][i][N_row - 1]/u[0][i][N_row - 1];
+    // Compute u dot n (normal component of velocity)
+    uin = uvel*nx + vvel*ny;
+    
+    // Compute interior speed of sound
+    ci = sqrt((gamma - 1)*(u[3][i][N_row - 1] - 0.5*(uvel*uvel + vvel*vvel)));
     
     // Continue as inflow or outflow
-    if (s < 0) { // inflow BC
-      // 
+    if (ui < 0) { // inflow BC
+      // Compute R_inf (infty, plus)
+      // and R_int (interior, minus)
+      R_inf = u_0 + 2.0/(gamma - 1.0)*c_0;
+      R_int = uin - 2.0/(gamma - 1.0)*ci;
+
+      // Compute unb
+      
     }
   }
 }

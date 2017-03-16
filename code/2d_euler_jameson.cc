@@ -116,8 +116,7 @@ void computeCellNormals(std::vector<std::vector<double> > &dsi_x,
     
     int I_max = dsi_x.size();
     int J_max = dsi_x[0].size();
-    double norm = 0; // For normalizing
-
+    
     for (int i = 0; i < I_max; i++) {
         for (int j = 0; j < J_max; j++) {
 	  // Calculate them
@@ -126,15 +125,6 @@ void computeCellNormals(std::vector<std::vector<double> > &dsi_x,
 	  dsj_x[i][j] = (grid_y[i][j+1] - grid_y[i][j]);
 	  dsj_y[i][j] = -1.0*(grid_x[i][j+1] - grid_x[i][j]); // Modified w/ -1
 	  
-	  //// Normalize
-	  // i first
-	  norm = sqrt(dsi_x[i][j]*dsi_x[i][j] + dsi_y[i][j]*dsi_y[i][j]);
-	  dsi_x[i][j] = dsi_x[i][j]/norm;
-	  dsi_y[i][j] = dsi_y[i][j]/norm;
-	  // j next
-	  norm = sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
-	  dsj_x[i][j] = dsj_x[i][j]/norm;
-	  dsj_y[i][j] = dsj_y[i][j]/norm;
         }
     }
 }
@@ -254,14 +244,22 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
 		   const int &N_row,
 		   const int &N_col) {
   
-  // Loop over the grid
+  // Loop over the upper row of grid
   double s = 0.; // sign of u dot n
+  double norm = 0; // For normalizing
+  
   for (int i = 0; i < N_col; i++) {
+    // Normalize "i" unit vectors
+    norm = sqrt(dsi_x[i][N_row - 1]*dsi_x[i][N_row - 1]
+		+ dsi_y[i][N_row - 1]*dsi_y[i][N_row - 1]);
+    nx = dsi_x[i][N_row - 1]/norm;
+    ny = dsi_y[i][N_row - 1]/norm;
+    
     // Check for inflow or outflow
     uvel = u[1][i][N_row - 1];
     vvel = v[1][i][N_row - 1];
     // Compute u dot n
-    s = uvel*dsi_x[i][N_row - 1] + vvel*dsi_y[i][N_row - 1];
+    s = uvel*nx + vvel*ny;
     
     // Continue as inflow or outflow
     if (s < 0) { // inflow BC

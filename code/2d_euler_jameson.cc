@@ -172,6 +172,7 @@ void writeOutput(const std::vector<std::vector<std::vector<double> > > &u)
 }
 
 void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
+            const std::vector<std::vector<double> > &omega,
             const std::vector<std::vector<double> > &dsi_x,
             const std::vector<std::vector<double> > &dsi_y,
             const std::vector<std::vector<double> > &dsj_x,
@@ -179,6 +180,33 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             std::vector<std::vector<std::vector<double> > > &r)
 {
     // Calculate residual r using Jameson scheme with artificial viscosity
+    const std::vector<std::vector<std::vector<double> > > F(u);
+    const std::vector<std::vector<std::vector<double> > > G(u);
+    
+    // Calculate and store cell centered fluxes
+    for (int i; i<u[0].size; i++){
+        for (int j; j<u[0][0].size(); j++) {
+            // Create temp variables for readability
+            double u_0 = u[0][i][j];
+            double u_1 = u[1][i][j];
+            double u_2 = u[2][i][j];
+            double u_3 = u[3][i][j];
+            double p = (gamma - 1.)*(u_3 - 0.5*(u_1*u_1 + u_2*u_2)/u_0);
+            
+            // Calculate fluxes
+            F[0][i][j] = u_0;
+            F[1][i][j] = u_1*u_1/u_0 + p;
+            F[2][i][j] = u_1*u_2/u_0;
+            F[3][i][j] = ;
+            G[0][i][j] = ;
+            G[1][i][j] = ;
+            G[2][i][j] = ;
+            G[3][i][j] = ;
+        }
+    }
+    // Calculate artificial viscosity
+    
+    // Calculate residuals
     
     
 }

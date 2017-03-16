@@ -177,14 +177,15 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             const std::vector<std::vector<double> > &dsi_y,
             const std::vector<std::vector<double> > &dsj_x,
             const std::vector<std::vector<double> > &dsj_y,
-            std::vector<std::vector<std::vector<double> > > &r)
+	    std::vector<std::vector<std::vector<double> > > &r,
+	    const double &gamma)
 {
     // Calculate residual r using Jameson scheme with artificial viscosity
-    const std::vector<std::vector<std::vector<double> > > F(u);
-    const std::vector<std::vector<std::vector<double> > > G(u);
+    std::vector<std::vector<std::vector<double> > > F(u);
+    std::vector<std::vector<std::vector<double> > > G(u);
     
     // Calculate and store cell centered fluxes
-    for (int i; i<u[0].size; i++){
+    for (int i; i<u[0].size(); i++){
         for (int j; j<u[0][0].size(); j++) {
             // Create temp variables for readability
             double u_0 = u[0][i][j];
@@ -197,11 +198,11 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             F[0][i][j] = u_0;
             F[1][i][j] = u_1*u_1/u_0 + p;
             F[2][i][j] = u_1*u_2/u_0;
-            F[3][i][j] = ;
-            G[0][i][j] = ;
-            G[1][i][j] = ;
-            G[2][i][j] = ;
-            G[3][i][j] = ;
+            //F[3][i][j] = ;
+            //G[0][i][j] = ;
+            //G[1][i][j] = ;
+            //G[2][i][j] = ;
+            //G[3][i][j] = ;
         }
     }
     // Calculate artificial viscosity
@@ -322,7 +323,7 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     uin = uvel*nx + vvel*ny; // interior
     u0n = u_0*nx; // infty
 
-    // Computer u tangential
+    // Compute u tangential
     //uit = uvel*ny - vvel*nx; // interior
     u0t = u_0*ny; // infty
     
@@ -456,28 +457,28 @@ int main()
         
         // First RK step
         // Calculate residual
-        spaceInt(u, omega, dsi_x, dsi_y, dsj_x, dsj_y, r); 
+        spaceInt(u, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
         // Calculate first RK step
         double alpha = 0.25;
         tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_1);
         
         // Second RK step
         // Calculate residual using u_1
-        spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r); 
+        spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
         // Calculate RK step
         alpha = 1./3.;
         tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
         
         // Third RK step
         // Calculate residual using u_2
-        spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r); 
+        spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
         // Calculate RK step
         alpha = 0.5;
         tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
         
         // Fourth RK step
         // Calculate residual using u_3
-        spaceInt(u_3, omega, dsi_x, dsi_y, dsj_x, dsj_y, r); 
+        spaceInt(u_3, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
         // Calculate RK step
         alpha = 1.;
         tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);

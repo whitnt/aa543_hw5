@@ -208,6 +208,7 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
     // Calculate artificial viscosity
     
     // Calculate residuals
+    r[][][] = 
     
     
 }

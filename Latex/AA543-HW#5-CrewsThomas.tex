@@ -198,11 +198,26 @@ Solve numerically the 2D Euler equations for the transonic flow over a NACA 0012
 			U_{-1,j} = U_{N-1,j}; \quad U_{N+1,j} = U_{0,j}
 			\end{align}
 	\subsection{Spacial discretization of 2D Euler equations with Jameson scheme}
-	Jameson scheme with artificial viscosity in 2D takes a sum of the numerical flux across each boundary to find a residual. 
+	In finite volume method we can say that the change of a value within a cell is equal to the sum of the fluxes through the cell walls.  This quantity we will call the residual $R$
 		\begin{align}
-		content...
+		\frac{d}{dt} (U_{i,j}\Omega_{i,j}) = -\sum_{Faces} F^{*(AV)} \cdot \Delta \vec s \equiv -R_{i,j}
 		\end{align}
-	sum off all fluxes across the boundaries
+	As there are always only four faces
+		\begin{align}
+		R_{i,j} = (F^{*(AV)} \cdot \Delta \vec s)_{i-1/2,j} + (F^{*(AV)} \cdot \Delta \vec s)_{i+1/2,j} + (F^{*(AV)} \cdot \Delta \vec s)_{i,j-1/2} + (F^{*(AV)} \cdot \Delta \vec s)_{i,j+1/2}
+		\end{align}
+	Where
+		\begin{align}
+		(F^{*(AV)} \cdot \Delta \vec s)_{i-1/2,j} = \frac{1}{2} \left[F_{i,j}^* + F_{i+1,j}^* \right] \cdot \Delta s_{i+1/2,j}^J - D_{i+1/2,j} \\
+		(F^{*(AV)} \cdot \Delta \vec s)_{i+1/2,j} = \frac{1}{2} \left[F_{i,j}^* + F_{i+1,j}^* \right] \cdot \Delta s_{i+1/2,j}^J - D_{i+1/2,j} \\
+		(F^{*(AV)} \cdot \Delta \vec s)_{i,j-1/2} = \frac{1}{2} \left[F_{i,j}^* + F_{i+1,j}^* \right] \cdot \Delta s_{i+1/2,j}^J - D_{i+1/2,j} \\
+		(F^{*(AV)} \cdot \Delta \vec s)_{i,j+1/2} = \frac{1}{2} \left[F_{i,j}^* + F_{i+1,j}^* \right] \cdot \Delta s_{i+1/2,j}^J - D_{i+1/2,j} \\
+		\end{align}
+	And
+		\begin{align}
+		F_{i,j}^* = F(U_{i,j})\hat{x} + G(U_{i,j})\hat{y}
+		\end{align}
+	The fluxes for the Euler equations are
 		\begin{align}
 		F(U) = \begin{bmatrix}
 		\rho u \\ \rho uu + p\\ \rho vu \\ \rho H u
@@ -216,13 +231,13 @@ Solve numerically the 2D Euler equations for the transonic flow over a NACA 0012
 		F(U) = \begin{bmatrix} U_1 \\ 
 		\frac{U_1^2}{U_0} + (\gamma - 1)\left[U_3 - \frac{1}{2} \left(\frac{U_1^2 + U_2^2}{U_0}\right)\right]\\ 
 		\frac{U_1 U_2 }{U_0} \\
-		U_1 \left[ \gamma \frac{U_3}{U_0} - \frac{\gamma - 1}{2} \left(\frac{U_1^2 + U_2^2}{U_0^2}\right)\right] \end{bmatrix} \\
+		U_1 \left[ \frac{U_3}{U_0} - \frac{\gamma - 1}{2} \left(\frac{U_1^2 + U_2^2}{U_0^2}\right)\right] \end{bmatrix} \\
 		G(U)= \begin{bmatrix} U_2 \\ 
 		\frac{U_1 U_2 }{U_0} \\
 		\frac{U_2^2}{U_0} + (\gamma - 1)\left[U_3 - \frac{1}{2} \left(\frac{U_1^2 + U_2^2}{U_0}\right)\right]\\ 
 		U_2 \left[ \gamma \frac{U_3}{U_0} - \frac{\gamma - 1}{2} \left(\frac{U_2^2 + U_2^2}{U_0^2}\right)\right] \end{bmatrix} 
 		\end{align}
-	The cell centered fluxes will be calculated for each cell $F_{i,j}^* = F(U_{i,j})$ and $G_{i,j}^* = G(U_{i,j})$.
+	
 	\subsection{Temporal discretization with Runge-Kutta 4 step time integration scheme}
 	The four step Runge-Kutta problem is as follows
 		\begin{align}

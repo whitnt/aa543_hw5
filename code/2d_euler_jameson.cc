@@ -174,11 +174,41 @@ void writeOutput(const std::vector<std::vector<std::vector<double> > > &u)
 void spaceInt()
 {
     // 
+    
+}
+
+void calcTau(const std::vector<std::vector<std::vector<double> > > &u, double tau_ij)
+{
+    // Calculate local time step
+    // Given parameters
+    double cfl = 2.8;
+    double gamma = 1.4;
+    
+    // Find local u, v and c
+    double rho_ij = u[0][i][j];
+    double u_ij = u[1][i][j]/rho_ij;
+    double v_ij = u[2][i][j]/rho_ij;
+    double p_ij = (gamma - 1)*(0.5*rho_ij*std::sqrt(u_ij*u_ij + v_ij*v_ij) 
+                            - u[3][i][j]);
+    double c_ij = std::sqrt(gamma*p_ij/rho_ij);
+    
+    // Average wall normals
+    double dsi_x_avg = 0.5*(dsi_x[i][j] + dsi_x[i][j+1]);
+    double dsi_y_avg = 0.5*(dsi_y[i][j] + dsi_y[i][j+1]);
+    double dsj_x_avg = 0.5*(dsi_x[i][j] + dsi_x[i+1][j]);
+    double dsj_y_avg = 0.5*(dsi_y[i][j] + dsi_y[i+1][j]);
+    
+    // Calculate max possible speed
+    double uc = u_ij + c_ij;
+    double vc = v_ij + c_ij;
+    
+    // Calculate time step
+    tau_ij = cfl/(std::abs(dsi_x_avg*uc + dsi_y_avg*vc) 
+                                + std::abs(dsj_x_avg*uc + dsj_y_avg*vc));
 }
 
 void tempInt(const std::vector<std::vector<std::vector<double> > > &u,
             const std::vector<std::vector<std::vector<double> > > &r,
-            const std::vector<std::vector<double> > &omega,
             const std::vector<std::vector<double> > &dsi_x,
             const std::vector<std::vector<double> > &dsi_y,
             const std::vector<std::vector<double> > &dsj_x,
@@ -189,22 +219,19 @@ void tempInt(const std::vector<std::vector<std::vector<double> > > &u,
     // Computes RK step given variable vector u, residual from spacial 
     // integrator r, a local time step (calculated here) and RK step weight alpha.
     
-    // Calculate local time step
-    double cfl = 2.8;
-    std::vector<std::vector> > dt(omega);
-    std::fill(dt.begin(), dt.end(), 0);
-    for (int i; i<dt.size; i++){
-        for (int j; j<dt[0].size(); j++) {
-            double dsi_x_avg = 0.5*(dsi_x[i][j] + dsi_x[i+1][j]);
-            double dsi_y_avg = 0.5*(dsi_y[i][j] + dsi_y[i+1][j]);
-            double dsj_x_avg = 0.5*(dsi_x[i][j] + dsi_x[i][j+1]);
-            double dsj_y_avg = 0.5*(dsi_y[i][j] + dsi_y[i][j+1]);
+    double tau_ij = 0.;
+    for (int i; i<u[0].size; i++){
+        for (int j; j<u[0][0].size(); j++) {
+            // Calculate local time step
+            calcDT(u, tau_ij);
             
-            dt[i][j] = cfl*(omega[i][j])/(std::abs()+std::abs());
+            // Calc RK step
+            u_new[0][i][j] = u[0][i][j] - alpha*tau_ij*r[0][i][j];
+            u_new[1][i][j] = u[1][i][j] - alpha*tau_ij*r[1][i][j];
+            u_new[2][i][j] = u[2][i][j] - alpha*tau_ij*r[2][i][j];
+            u_new[3][i][j] = u[3][i][j] - alpha*tau_ij*r[3][i][j];
         }
     }
-    // Calculate RK step
-    
 }
 
 void setBC()

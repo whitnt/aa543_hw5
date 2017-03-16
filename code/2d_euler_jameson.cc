@@ -181,15 +181,19 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
 	    const double &gamma)
 {
     // Calculate residual r using Jameson scheme with artificial viscosity
+    // Initialize stuff
     std::vector<std::vector<std::vector<double> > > F(u);
     std::vector<std::vector<std::vector<double> > > G(u);
     std::vector<std::vector<double> > p(omega);
     std::vector<std::vector<double> > sound(omega);
+    std::vector<std::vector<double> > nui(omega);
+    std::vector<std::vector<double> > nuj(omega);
 
-    std::vector<std::vector<double> > dpi12(omega);
-    std::vector<std::vector<double> > dmi12(omega);
-    std::vector<std::vector<double> > dpj12(omega);
-    std::vector<std::vector<double> > dmj12(omega);
+    // Initialize "D" viscosity vectors
+    std::vector<std::vector<std::vector<double> > > dpi12(omega);
+    std::vector<std::vector<std::vector<double> > > dmi12(omega);
+    std::vector<std::vector<std::vector<double> > > dpj12(omega);
+    std::vector<std::vector<std::vector<double> > > dmj12(omega);
     
     // Calculate and store cell centered fluxes
     for (int i; i < u[0].size(); i++){
@@ -204,21 +208,307 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             
             // Calculate fluxes
             F[0][i][j] = u_1;
-            F[1][i][j] = u_1*u_1/u_0 + p;
+            F[1][i][j] = u_1*u_1/u_0 + p[i][j];
             F[2][i][j] = u_1*u_2/u_0;
-            F[3][i][j] = u_1*(u_3 + p)/u_0;
+            F[3][i][j] = u_1*(u_3 + p[i][j])/u_0;
             G[0][i][j] = u_2;
             G[1][i][j] = u_1*u_2/u_0;
-            G[2][i][j] = u_2*u_2/u_0 + p;
-            G[3][i][j] = u_2*(u_3 + p)/u_0;
+            G[2][i][j] = u_2*u_2/u_0 + p[i][j];
+            G[3][i][j] = u_2*(u_3 + p[i][j])/u_0;
         }
     }
     
-    //std::vector<std::vector<double> > eps2i(omega);
-    //std::vector<std::vector<double> > eps2j(omega);
-    //std::vector<std::vector<double> > eps4(omega);
-    //std::vector<std::vector<double> > wavex(omega);
-    //std::vector<std::vector<double> > wavey(omega);
+    // double eps2pi12(omega);
+    // double eps2mi12(omega);
+    // double eps2pj12(omega);
+    // double eps2mj12(omega);
+    // double eps4pi12(omega);
+    // double eps4mi12(omega);
+    // double eps4pj12(omega);
+    // double eps4mj12(omega);
+    
+    ////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////NORMALIZED PRESSURE GRADIENT //////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
+    // Calculate the "nu" values for epsilon viscosity parameters
+    // Normalized pressure gradient
+    // NEEDS: Boundary Info
+    for (int i = 1; i < (u[0].size() - 1); i++) {
+      for (int j = 1; j < (u[0][0].size() - 1); j++) {
+	nui[i][j] = abs(p[i+1][j] - 2.0*p[i][j] + p[i-1][j])/
+	  (p[i+1][j] + 2.0*p[i][j] + p[i-1][j]);
+	nuj[i][j] = abs(p[i][j+1] - 2.0*p[i][j] + p[i][j-1])/
+	  (p[i][j+1] + 2.0*p[i][j] + p[i][j-1]);
+      }
+    }
+    
+    int iSZ = u[0].size() - 1; // For indexing in periodic/ghost fixes
+    int jSZ = u[0][0].size() - 3; // For indexing in periodic/ghost fixes
+    // Calculate the D viscosity parameters for cell interfaces
+    for (int i = 0; i < u[0].size(); i++) {
+      for (int j = 0; (j < u[0][0].size() - 2); j++) {
+	double u_ij = u[1][i][j]/u[0][i][j];
+	double v_ij = u[2][i][j]/u[0][i][j];
+	//////////////////////////////////////////////////////////////////////////////
+	///////////////// CALCULATION FOR I'S ////////////////////////////////////////
+	///////////////////////////////////////////////// CALCULATION FOR DPI12, DMI12
+	//////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
+	// Calculate epsilon parameters
+	// Epsilon2 calc
+	if ( i == 0 ) { // Periodic "i" Fix
+	  // Wave Speed PLUS
+	  double wave_ip12 = u_ij*dsj_x[i+1][j] + v_ij*dsj_y[i+1][j] +
+	    sound[i][j]*sqrt(dsj_x[i+1][j]*dsj_x[i+1][j] + dsj_y[i+1][j]*dsj_y[i+1][j]);
+	  // Wave Speed MINUS
+	  double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
+	    sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
+	  // Epsilon12 PLUS
+	  double eps2pi12 = 0.5*0.25*wave_ip12*
+	    std::max(nui[iSZ][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
+	  // Epsilon12 MINUS
+	  double eps2mi12 = 0.5*0.25*wave_im12*
+	    std::max(nui[iSZ][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
+	}
+	if ( i == u[0].size() - 2 ) { // Periodic "i" Fix
+	  // Wave speed PLUS
+	  double wave_ip12 = u_ij*dsj_x[i+1][j] + v_ij*dsj_y[i+1][j] +
+	    sound[i][j]*sqrt(dsj_x[i+1][j]*dsj_x[i+1][j] + dsj_y[i+1][j]*dsj_y[i+1][j]);
+	  // Wave Speed MINUS
+	  double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
+	    sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
+	  // Epsilon12 PLUS
+	  double eps2pi12 = 0.5*0.25*wave_ip12*
+	    std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[0][j]);
+	  // Epsilon12 MINUS
+	  double eps2mi12 = 0.5*0.25*wave_im12*
+	    std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
+	}
+	if ( i == u[0].size() - 1 ) { // Periodic "i" Fix
+	  // Wave speed PLUS
+	  double wave_ip12 = u_ij*dsj_x[0][j] + v_ij*dsj_y[0][j] +
+	    sound[i][j]*sqrt(dsj_x[0][j]*dsj_x[0][j] + dsj_y[0][j]*dsj_y[0][j]);
+	  // Wave Speed MINUS
+	  double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
+	    sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
+	  // Epsilon12 PLUS
+	  double eps2pi12 = 0.5*0.25*wave_ip12*
+	    std::max(nui[i-1][j], nui[i][j], nui[0][j], nui[1][j]);
+	  // Epsilon12 MINUS
+	  double eps2pi12 = 0.5*0.25*wave_im12*
+	    std::max(nui[i-1][j], nui[i][j], nui[0][j], nui[1][j]);
+	}
+	else { // no need for periodic fix
+	  // Wave speed PLUS
+	  double wave_ip12 = u_ij*dsj_x[i+1][j] + v_ij*dsj_y[i+1][j] +
+	    sound[i][j]*sqrt(dsj_x[i+1][j]*dsj_x[i+1][j] + dsj_y[i+1][j]*dsj_y[i+1][j]);
+	  // Wave Speed MINUS
+	  double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
+	    sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
+	  // Epsilon12 PLUS
+	  double eps2pi12 = 0.5*0.25*wave_ip12*
+	    std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
+	  // Epsilon12 MINUS
+	  double eps2mi12 = 0.5*0.25*wave_im12*
+	    std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
+	}
+	
+	// Epsilon4 calc PLUS
+	double eps4pi12 = std::max(0, 0.5*0.003906*wave_ip12 - eps2pi12);
+	// Epsilon4 calc MINUS
+	double eps4mi12 = std::max(0, 0.5*0.003906*wave_im12 - eps2mi12);
+	
+	// dpi12 calc
+	if ( i == 0 ) { // Periodic Fix
+	  // DPI12 (plus)
+	  for (int k = 0; k < 3; k++) {
+	    dpi12[k][i][j] = eps2pi12*(u[k][i+1][j] - u[k][i][j])
+	      - eps4pi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
+			  + 3.0*u[k][i][j] - u[k][iSZ][j]);
+	  }
+	  // DMI12 (minus)
+	  for (int k = 0; k < 3; k++) {
+	    dmi12[k][i][j] = eps2mi12*(u[k][i+1][j] - u[k][i][j])
+	      - eps4mi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
+			  + 3.0*u[k][i][j] - u[k][iSZ][j]);
+	  }
+	}
+	if ( i == u[0].size() - 2 ) { // Periodic Fix
+	  // DPI12 (plus)
+	  for (int k = 0; k < 3; k++) {
+	    dpi12[k][i][j] = eps2pi12*(u[k][i+1][j] - u[k][i][j])
+	      - eps4pi12*(u[k][0][j] - 3.0*u[k][i+1][j]
+			  + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  }
+	  // DMI12 (minus)
+	  for (int k = 0; k < 3; k++) {
+	    dmi12[k][i][j] = eps2mi12*(u[k][i+1][j] - u[k][i][j])
+	      - eps4mi12*(u[k][0][j] - 3.0*u[k][i+1][j]
+			  + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  }
+    	}
+	if ( i == u[0].size() - 1 ) { // Periodic Fix
+	  // DPI12 (plus)
+	  for (int k = 0; k < 3; k++) {
+	    dpi12[k][i][j] = eps2pi12*(u[k][0][j] - u[k][i][j])
+	      - eps4pi12*(u[k][1][j] - 3.0*u[k][0][j]
+			  + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  }
+	  // DMI12 (minus)
+	  for (int k = 0; k < 3; k++) {
+	    dmi12[k][i][j] = eps2mi12*(u[k][0][j] - u[k][i][j])
+	      - eps4mi12*(u[k][1][j] - 3.0*u[k][0][j]
+			  + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  }
+    	}
+	else { // no need for periodic fix
+	  // DPI12 (plus)
+	  for (int k = 0; k < 3; k++) {
+	    dpi12[k][i][j] = eps2pi12*(u[k][i+1][j] - u[k][i][j])
+	      - eps4pi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
+			  + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  }
+	  // DMI12 (minus)
+	  for (int k = 0; k < 3; k++) {
+	    dmi12[k][i][j] = eps2mi12*(u[k][i+1][j] - u[k][i][j])
+	      - eps4mi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
+			  + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  }
+	}
+	
+	//////////////////////////////////////////////////////////////////////////////
+	///////////////// CALCULATION FOR J'S ////////////////////////////////////////
+	////////////////////////////////////////////// CALCULATION FOR DPJ12, DMJ12 //
+	//////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////// CALCULATION FOR DPJ12 and DMJ12 //////////
+	//////////////////////////////////////////////////////////////////////////////
+	// Epsilon2 calc
+	if ( j == 0 ) { // Double Ghost Fix
+	  // Wave Speed PLUS
+	  double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
+	    sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]);
+	  // Wave Speed MINUS
+	  double wave_jm12 = -u_ij*dsi_x[i][j] - v_ij*dsi_y[i][j] +
+	    sound[i][j]*sqrt(dsi_x[i][j]*dsi_x[i][j] + dsi_y[i][j]*dsi_y[i][j]);
+	  // Epsilon12 PLUS
+	  double eps2pj12 = 0.5*0.25*wave_jp12*
+	    std::max(nuj[i][jSZ - 2], nuj[i][j], nuj[i][j+1], nuj[i][j+2]); // CHECK
+	  // Epsilon12 MINUS
+	  double eps2mj12 = 0.5*0.25*wave_jm12*
+	    std::max(nuj[i][jSZ - 2], nuj[i][j], nuj[i][j+1], nuj[i][j+2]); // CHECK
+	}
+	if ( j == u[0][0].size() - 3 ) { // Double Ghost Fix
+	  // Wave speed PLUS
+	  double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
+	    sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]); // CHECK
+	  // Wave Speed MINUS
+	  double wave_jm12 = -u_ij*dsi_x[i][j] - v_ij*dsi_y[i][j] +
+	    sound[i][j]*sqrt(dsi_x[i][j]*dsi_x[i][j] + dsi_y[i][j]*dsi_y[i][j]);
+	  // Epsilon12 PLUS
+	  double eps2pj12 = 0.5*0.25*wave_jp12*
+	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[i][j + 1]);
+	  // Epsilon12 MINUS
+	  double eps2mj12 = 0.5*0.25*wave_jm12*
+	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[i][j + 1]);
+	}
+	if ( j == u[0][0].size() - 4 ) { // Double Ghost Fix
+	  // Wave speed PLUS
+	  double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
+	    sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]);
+	  // Wave Speed MINUS
+	  double wave_jm12 = -u_ij*dsi_x[i][j] - v_ij*dsi_y[i][j] +
+	    sound[i][j]*sqrt(dsi_x[i][j]*dsi_x[i][j] + dsi_y[i][j]*dsi_y[i][j]);
+	  // Epsilon12 PLUS
+	  double eps2pj12 = 0.5*0.25*wave_jp12*
+	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[1][j + 2]);
+	  // Epsilon12 MINUS
+	  double eps2pj12 = 0.5*0.25*wave_jm12*
+	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[1][j + 2]);
+	}
+	else { // no need for ghost fix
+	  // Wave speed PLUS
+	  double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
+	    sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]);
+	  // Wave Speed MINUS
+	  double wave_jm12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
+	    sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]dsj_y[i][j]);
+	  // Epsilon12 PLUS
+	  double eps2pj12 = 0.5*0.25*wave_jp12*
+	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j+1], nuj[i][j+2]);
+	  // Epsilon12 MINUS
+	  double eps2mj12 = 0.5*0.25*wave_jm12*
+	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j+1], nuj[i][j+2]);
+	}
+	
+	// Epsilon4 calc PLUS
+	double eps4pj12 = std::max(0, 0.5*0.003906*wave_jp12 - eps2pj12);
+	// Epsilon4 calc MINUS
+	double eps4mj12 = std::max(0, 0.5*0.003906*wave_jm12 - eps2mj12);
+	
+	// dpj12 calc
+	if ( j == 0 ) { // Ghost Fix
+	  // DPJ12 (plus)
+	  for (int k = 0; k < 3; k++) {
+	    dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
+	      - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  + 3.0*u[k][i][j] - u[k][i][j-1]);
+	  }
+	  // DMJ12 (minus)
+	  for (int k = 0; k < 3; k++) {
+	    dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
+	      - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  + 3.0*u[k][i][j] - u[k][i][j-1]);
+	  }
+	}
+	if ( j == jSZ - 2 ) { // Ghost Fix
+	  // DPJ12 (plus)
+	  for (int k = 0; k < 3; k++) {
+	    dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
+	      - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
+	  }
+	  // DMJ12 (minus)
+	  for (int k = 0; k < 3; k++) {
+	    dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
+	      - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
+	  }
+    	}
+	if ( j == jSZ - 1 ) { // Ghost Fix
+	  // DPJ12 (plus)
+	  for (int k = 0; k < 3; k++) {
+	    dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
+	      - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
+	  }
+	  // DMJ12 (minus)
+	  for (int k = 0; k < 3; k++) {
+	    dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
+	      - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
+	  }
+    	}
+	else { // no need for ghost fix
+	  // DPJ12 (plus)
+	  for (int k = 0; k < 3; k++) {
+	    dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
+	      - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  + 3.0*u[k][i][j] - u[k][i][j-1]);
+	  }
+	  // DMJ12 (minus)
+	  for (int k = 0; k < 3; k++) {
+	    dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
+	      - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  + 3.0*u[k][i][j] - u[k][i][j-1]);
+	  }
+	}
+	
+      } // Close Loop over J
+    } // Close Loop over I
     
     // Calculate residuals
     // First calculate wave-speeds and normalized pressure gradients
@@ -322,14 +612,14 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
   
   for (int i = 0; i < N_col; i++) {
     // Normalize "j" unit vectors
-    norm = sqrt(dsj_x[i][J_max - 3]*dsj_x[i][J_max - 3]
-		+ dsj_y[i][J_max - 3]*dsj_y[i][J_max - 3]);
-    nx = -1.0*dsj_x[i][J_max - 3]/norm; // Reverse for convention 
-    ny = -1.0*dsj_y[i][J_max - 3]/norm; // Reverse for convention
+    norm = sqrt(dsi_x[i][J_max - 2]*dsi_x[i][J_max - 2]
+		+ dsi_y[i][J_max - 2]*dsi_y[i][J_max - 2]);
+    nx = -1.0*dsi_x[i][J_max - 2]/norm; // Reverse for convention 
+    ny = -1.0*dsi_y[i][J_max - 2]/norm; // Reverse for convention
     
     // Check for inflow or outflow
-    uvel = u[1][i][J_max - 3]/u[0][i][J_max - 3];
-    vvel = u[2][i][J_max - 3]/u[0][i][J_max - 3];
+    uvel = u[1][i][J_max - 2]/u[0][i][J_max - 2];
+    vvel = u[2][i][J_max - 2]/u[0][i][J_max - 2];
     
     // Compute u dot n (normal component of velocity)
     uin = uvel*nx + vvel*ny; // interior
@@ -340,11 +630,11 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     u0t = u_0*ny; // infty
     
     // Compute interior speed of sound
-    ci = sqrt((gamma - 1)*(u[3][i][J_max - 3]/u[0][i][J_max - 3]
+    ci = sqrt((gamma - 1)*(u[3][i][J_max - 2]/u[0][i][J_max - 2]
 			   - 0.5*(uvel*uvel + vvel*vvel)));
     
     // Compute interior pressure
-    pi = u[0][i][J_max - 3]*ci;
+    pi = u[0][i][J_max - 2]*ci;
     
     // Continue as inflow or outflow
     if (uin > 0) { // inflow BC
@@ -364,7 +654,7 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     // Compute Primitive Boundary Values
     unb = 0.5*(R_inf + R_int);
     cb = 0.25*(gamma - 1.0)*(R_inf - R_int);
-    rhob = pow(p_0/(pow(rho_0, gamma)*cb*cb), 1./(gamma - 1.0));
+    rhob = pow(cb*cb*pow(rho_0, gamma)/(gamma*p_0), 1./(gamma - 1.0));
     pb = rhob*cb*cb;
     
     // Compute Conserved Boundary Values

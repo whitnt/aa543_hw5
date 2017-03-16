@@ -208,9 +208,13 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
     // Calculate artificial viscosity
     
     // Calculate residuals
-    r[][][] = 
-    
-    
+    for (int i; i<u[0].size(); i++){
+        for (int j; j<u[0][0].size(); j++) {
+            
+            
+            r[][][] = ;
+        }
+    }
 }
 
 void calcTau(const std::vector<std::vector<std::vector<double> > > &u, 

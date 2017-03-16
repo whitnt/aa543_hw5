@@ -172,13 +172,20 @@ void writeOutput(const std::vector<std::vector<std::vector<double> > > &u)
     }
 }
 
-void spaceInt()
+void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
+            const std::vector<std::vector<double> > &dsi_x,
+            const std::vector<std::vector<double> > &dsi_y,
+            const std::vector<std::vector<double> > &dsj_x,
+            const std::vector<std::vector<double> > &dsj_y,
+            std::vector<std::vector<std::vector<double> > > &r)
 {
-    // 
+    // Calculate residual r using Jameson scheme with artificial viscosity
+    
     
 }
 
-void calcTau(const std::vector<std::vector<std::vector<double> > > &u, double tau_ij)
+void calcTau(const std::vector<std::vector<std::vector<double> > > &u, 
+            const int i, const int j, double tau_ij)
 {
     // Calculate local time step
     // Given parameters
@@ -222,9 +229,9 @@ void tempInt(const std::vector<std::vector<std::vector<double> > > &u,
     
     double tau_ij = 0.;
     for (int i; i<u[0].size; i++){
-        for (int j; j<u[0][0].size(); j++) {
+        for (int j; j<u[0][0].size()-2; j++) {
             // Calculate local time step
-            calcDT(u, tau_ij);
+            calcTau(u, i, j, tau_ij);
             
             // Calc RK step
             u_new[0][i][j] = u[0][i][j] - alpha*tau_ij*r[0][i][j];
@@ -325,7 +332,7 @@ int main()
     
     // create u vector (N_col+1 -> airfoil ghost cell, N_col+2 -> exterior ghost cell)
     for (int var = 0; var<vars; var++){
-        u.push_back();
+        u.push_back(u_temp);
     }
     
     // Prep work:
@@ -356,34 +363,34 @@ int main()
         
         // First RK step
         // Calculate residual
-        spaceInt(u, omega, dxi_x, dsi_y, dsj_x, dsj_y, r); 
+        spaceInt(u, omega, dsi_x, dsi_y, dsj_x, dsj_y, r); 
         // Calculate first RK step
         double alpha = 0.25;
-        tempInt(u, r, omega, dxi_x, dsi_y, dsj_x, dsj_y, alpha, u_1);
+        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_1);
         
         // Second RK step
         // Calculate residual using u_1
-        spaceInt(u_1, omega, dxi_x, dsi_y, dsj_x, dsj_y, r); 
+        spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r); 
         // Calculate RK step
         alpha = 1./3.;
-        tempInt(u, r, omega, dxi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
+        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
         
         // Third RK step
         // Calculate residual using u_2
-        spaceInt(u_2, omega, dxi_x, dsi_y, dsj_x, dsj_y, r); 
+        spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r); 
         // Calculate RK step
         alpha = 0.5;
-        tempInt(u, r, omega, dxi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
+        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
         
         // Fourth RK step
         // Calculate residual using u_3
-        spaceInt(u_3, omega, dxi_x, dsi_y, dsj_x, dsj_y, r); 
+        spaceInt(u_3, omega, dsi_x, dsi_y, dsj_x, dsj_y, r); 
         // Calculate RK step
         alpha = 1.;
-        tempInt(u, r, omega, dxi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);
+        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);
         
         // Apply boundary conditions
-        applyBC(u_4);
+        //~ applyBC(u_4);
         
         // Update original vector u
         

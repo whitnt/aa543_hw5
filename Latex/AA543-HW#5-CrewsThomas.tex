@@ -208,10 +208,10 @@ Solve numerically the 2D Euler equations for the transonic flow over a NACA 0012
 		\end{align}
 	Where
 		\begin{align}
-		(F^{*(AV)} \cdot \Delta \vec s)_{i-1/2,j} = \frac{1}{2} \left[F_{i,j}^* + F_{i+1,j}^* \right] \cdot \Delta s_{i+1/2,j}^J - D_{i+1/2,j} \\
-		(F^{*(AV)} \cdot \Delta \vec s)_{i+1/2,j} = \frac{1}{2} \left[F_{i,j}^* + F_{i+1,j}^* \right] \cdot \Delta s_{i+1/2,j}^J - D_{i+1/2,j} \\
-		(F^{*(AV)} \cdot \Delta \vec s)_{i,j-1/2} = \frac{1}{2} \left[F_{i,j}^* + F_{i+1,j}^* \right] \cdot \Delta s_{i+1/2,j}^J - D_{i+1/2,j} \\
-		(F^{*(AV)} \cdot \Delta \vec s)_{i,j+1/2} = \frac{1}{2} \left[F_{i,j}^* + F_{i+1,j}^* \right] \cdot \Delta s_{i+1/2,j}^J - D_{i+1/2,j} \\
+		&(F^{*(AV)} \cdot \Delta \vec s)_{i-1/2,j} = \frac{1}{2} \left[F_{i,j}^* + F_{i-1,j}^* \right] \cdot \Delta s_{i,j}^J - D_{i-1/2,j} \\
+		&(F^{*(AV)} \cdot \Delta \vec s)_{i+1/2,j} = \frac{1}{2} \left[F_{i,j}^* + F_{i+1,j}^* \right] \cdot \Delta s_{i+1,j}^J - D_{i+1/2,j} \\
+		&(F^{*(AV)} \cdot \Delta \vec s)_{i,j-1/2} = \frac{1}{2} \left[F_{i,j}^* + F_{i,j-1}^* \right] \cdot \Delta s_{i,j}^I - D_{i,j-1/2} \\
+		&(F^{*(AV)} \cdot \Delta \vec s)_{i,j+1/2} = \frac{1}{2} \left[F_{i,j}^* + F_{i,j+1}^* \right] \cdot \Delta s_{i,j+1}^I - D_{i,j+1/2}
 		\end{align}
 	And
 		\begin{align}

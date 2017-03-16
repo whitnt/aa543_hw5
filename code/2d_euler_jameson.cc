@@ -300,28 +300,32 @@ int main()
     std::vector< std::vector<double> > dsj_x;
     std::vector< std::vector<double> > dsj_y;
     // Conserved variables
+    std::vector< std::vector<double> > u_temp;
     std::vector< std::vector< std::vector<double> > > u;
     
     ////// Size the vectors
     std::vector<double> col (N_col); // For vectors that hold verticie values
-    std::vector<double> colp (N_col+1); // For vectors that hold cell centered values
+    std::vector<double> colm (N_col-1); // For vectors that hold cell centered values
+    std::vector<double> colp (N_col+1); // For vectors with ghost cells (just u)
     grid_x.push_back(col);
     grid_y.push_back(col);
     
     for (int row = 0; row < N_row - 1; row++) {
         grid_x.push_back(col);
         grid_y.push_back(col);
-        x.push_back(colp);
-        y.push_back(colp);
-        omega.push_back(colp);
-        dsi_x.push_back(colp);
-        dsi_y.push_back(colp);
-        dsj_x.push_back(colp);
-        dsj_y.push_back(colp);
+        x.push_back(colm);
+        y.push_back(colm);
+        omega.push_back(colm);
+        dsi_x.push_back(colm);
+        dsi_y.push_back(colm);
+        dsj_x.push_back(colm);
+        dsj_y.push_back(colm);
+        u_temp.push_back(colp);
     }
     
+    // create u vector (N_col+1 -> airfoil ghost cell, N_col+2 -> exterior ghost cell)
     for (int var = 0; var<vars; var++){
-        u.push_back(x);
+        u.push_back();
     }
     
     // Prep work:

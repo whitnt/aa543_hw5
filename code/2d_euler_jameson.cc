@@ -243,8 +243,9 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
 		   const int &N_col,
 		   const double &u_0,
 		   const double &c_0,
-		   const duoble &rho_0,
-		   const double &p_0) {
+		   const double &rho_0,
+		   const double &p_0,
+		   const double &gamma) {
   
   ///// Loop over the upper row of grid
   // Initialize stuff
@@ -255,6 +256,8 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
   double uvel = 0.; // ux interior
   double vvel = 0.; // uy interior
   double norm = 0.; // For normalizing normal vector
+  double nx = 0.;
+  double ny = 0.;
   double R_inf = 0.; // Riemann infty
   double R_int = 0.; // Riemann interior
   double ci = 0.; // interior sound speed
@@ -292,14 +295,14 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     pi = u[0][i][J_max - 3]*ci;
     
     // Continue as inflow or outflow
-    if (ui > 0) { // inflow BC
+    if (uin > 0) { // inflow BC
       // Compute R_inf (infty, plus)
       // and R_int (interior, minus)
       R_inf = abs(u0n) + 2.0/(gamma - 1.0)*c_0;
       R_int = abs(uin) - 2.0/(gamma - 1.0)*ci;
     }
     
-    if (ui < 0) { // outflow BC
+    if (uin < 0) { // outflow BC
       // Compute R_inf (infty, minus)
       // and R_int (interior, plus)
       R_inf = -1.0*abs(u0n) - 2.0/(gamma - 1.0)*c_0;
@@ -324,6 +327,8 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
 			        + 0.5*(unb*unb + u0t*u0t));
   }
 }
+
+
 
 int main()
 {

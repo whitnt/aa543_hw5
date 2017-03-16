@@ -31,10 +31,11 @@ void readGrid(std::vector<std::vector<double> > &grid_x,
         for (int i = 0; i < I_max; i++) {
             x_file >> x;
             y_file >> y;
-	    if (i == 0) {
-		std::cout << "x is" << x << "\n";
-		std::cout << "y is" << y << "\n";
-	    }
+	    // For debug
+	    //if (i == 0) {
+	    //std::cout << "x is" << x << "\n";
+	    //	std::cout << "y is" << y << "\n";
+	    //}
             grid_x[i][j] = x;
             grid_y[i][j] = y;
         }
@@ -117,13 +118,25 @@ void computeCellNormals(std::vector<std::vector<double> > &dsi_x,
     
     int I_max = dsi_x.size();
     int J_max = dsi_x[0].size();
-    
+    double norm = 0; // For normalizing
+
     for (int i = 0; i < I_max; i++) {
         for (int j = 0; j < J_max; j++) {
+	  // Calculate them
 	  dsi_x[i][j] = (grid_y[i+1][j] - grid_y[i][j]);
 	  dsi_y[i][j] = -1.0*(grid_x[i+1][j] - grid_x[i][j]); // Modified w/ -1
 	  dsj_x[i][j] = (grid_y[i][j+1] - grid_y[i][j]);
 	  dsj_y[i][j] = -1.0*(grid_x[i][j+1] - grid_x[i][j]); // Modified w/ -1
+	  
+	  //// Normalize
+	  // i first
+	  norm = sqrt(dsi_x[i][j]*dsi_x[i][j] + dsi_y[i][j]*dsi_y[i][j]);
+	  dsi_x[i][j] = dsi_x[i][j]/norm;
+	  dsi_y[i][j] = dsi_y[i][j]/norm;
+	  // j next
+	  norm = sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
+	  dsj_x[i][j] = dsj_x[i][j]/norm;
+	  dsj_y[i][j] = dsj_y[i][j]/norm;
         }
     }
 }
@@ -184,7 +197,7 @@ void tempInt(const std::vector<std::vector<std::vector<double> > > &u,
             const std::vector<std::vector<double> > &dsj_x,
             const std::vector<std::vector<double> > &dsj_y,
             const double alpha,
-            std::vector<std::vector<std::vector<double> > > &u_new)
+	    std::vector<std::vector<std::vector<double> > > &u_new)
 {
     // Computes RK step given variable vector u, residual from spacial 
     // integrator r, a local time step (calculated here) and RK step weight alpha.
@@ -207,9 +220,29 @@ void tempInt(const std::vector<std::vector<std::vector<double> > > &u,
     
 }
 
-void setBC()
-{
+// Function to set exterior BCs using Riemann invariants
+void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
+		   std::vector<std::vector<double> > &dsi_x,
+		   std::vector<std::vector<double> > &dsi_y,
+		   std::vector<std::vector<double> > &dsj_x,
+		   std::vector<std::vector<double> > &dsj_y,
+		   const int &N_row,
+		   const int &N_col) {
+  
+  // Loop over the grid
+  double s = 0.; // sign of u dot n
+  for (int i = 0; i < N_col; i++) {
+    // Check for inflow or outflow
+    uvel = u[1][i][N_row - 1];
+    vvel = v[1][i][N_row - 1];
+    // Compute u dot n
+    s = uvel*dsi_x[i][N_row - 1] + vvel*dsi_y[i][N_row - 1];
     
+    // Continue as inflow or outflow
+    if (s < 0) { // inflow BC
+      // 
+    }
+  }
 }
 
 int main()

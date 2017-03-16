@@ -464,7 +464,7 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
 			  + 3.0*u[k][i][j] - u[k][i][j-1]);
 	  }
 	}
-	if ( j == jSZ - 2 ) { // Ghost Fix
+	if ( j == u[0][0].size() - 4 ) { // Ghost Fix
 	  // DPJ12 (plus)
 	  for (int k = 0; k < 3; k++) {
 	    dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
@@ -478,7 +478,7 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
 			  + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
 	  }
     	}
-	if ( j == jSZ - 1 ) { // Ghost Fix
+	if ( j == u[0][0].size() - 3 ) { // Ghost Fix
 	  // DPJ12 (plus)
 	  for (int k = 0; k < 3; k++) {
 	    dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])

@@ -220,7 +220,7 @@ Solve numerically the 2D Euler equations for the transonic flow over a NACA 0012
 		G(U)= \begin{bmatrix} U_2 \\ 
 		\frac{U_1 U_2 }{U_0} \\
 		\frac{U_2^2}{U_0} + (\gamma - 1)\left[U_3 - \frac{1}{2} \left(\frac{U_1^2 + U_2^2}{U_0}\right)\right]\\ 
-		U_1 \left[ \gamma \frac{U_3}{U_0} - \frac{\gamma - 1}{2} \left(\frac{U_2^2 + U_2^2}{U_0^2}\right)\right] \end{bmatrix} 
+		U_2 \left[ \gamma \frac{U_3}{U_0} - \frac{\gamma - 1}{2} \left(\frac{U_2^2 + U_2^2}{U_0^2}\right)\right] \end{bmatrix} 
 		\end{align}
 	The cell centered fluxes will be calculated for each cell $F_{i,j}^* = F(U_{i,j})$ and $G_{i,j}^* = G(U_{i,j})$.
 	\subsection{Temporal discretization with Runge-Kutta 4 step time integration scheme}

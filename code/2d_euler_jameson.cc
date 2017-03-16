@@ -124,7 +124,6 @@ void computeCellNormals(std::vector<std::vector<double> > &dsi_x,
 	  dsi_y[i][j] = -1.0*(grid_x[i+1][j] - grid_x[i][j]); // Modified w/ -1
 	  dsj_x[i][j] = (grid_y[i][j+1] - grid_y[i][j]);
 	  dsj_y[i][j] = -1.0*(grid_x[i][j+1] - grid_x[i][j]); // Modified w/ -1
-	  
         }
     }
 }
@@ -248,30 +247,88 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
 		   std::vector<std::vector<double> > &dsi_y,
 		   std::vector<std::vector<double> > &dsj_x,
 		   std::vector<std::vector<double> > &dsj_y,
-		   const int &N_row,
-		   const int &N_col) {
+		   const int &N_col,
+		   const double &u_0,
+		   const double &c_0,
+		   const duoble &rho_0,
+		   const double &p_0) {
   
-  // Loop over the upper row of grid
-  double s = 0.; // sign of u dot n
-  double norm = 0; // For normalizing
+  ///// Loop over the upper row of grid
+  // Initialize stuff
+  double uin = 0.; // u dot n interior
+  double u0n = 0.; // u dot n infty
+  //double uit = 0.; // u tangential interior
+  double u0t = 0.; // u tangential infty
+  double uvel = 0.; // ux interior
+  double vvel = 0.; // uy interior
+  double norm = 0.; // For normalizing normal vector
+  double R_inf = 0.; // Riemann infty
+  double R_int = 0.; // Riemann interior
+  double ci = 0.; // interior sound speed
+  double cb = 0.; // boundary sound speed
+  double unb = 0.; // u dot n boundary
+  double rhob = 0.; // density boundary
+  double pb = 0.; // pressure boundary
+  double pi = 0.; // pressure interior
+  int J_max = u[0][0].size();
   
   for (int i = 0; i < N_col; i++) {
-    // Normalize "i" unit vectors
-    norm = sqrt(dsi_x[i][N_row - 1]*dsi_x[i][N_row - 1]
-		+ dsi_y[i][N_row - 1]*dsi_y[i][N_row - 1]);
-    nx = dsi_x[i][N_row - 1]/norm;
-    ny = dsi_y[i][N_row - 1]/norm;
+    // Normalize "j" unit vectors
+    norm = sqrt(dsj_x[i][J_max - 3]*dsj_x[i][J_max - 3]
+		+ dsj_y[i][J_max - 3]*dsj_y[i][J_max - 3]);
+    nx = -1.0*dsj_x[i][J_max - 3]/norm; // Reverse for convention 
+    ny = -1.0*dsj_y[i][J_max - 3]/norm; // Reverse for convention
     
     // Check for inflow or outflow
-    uvel = u[1][i][N_row - 1];
-    vvel = v[1][i][N_row - 1];
-    // Compute u dot n
-    s = uvel*nx + vvel*ny;
+    uvel = u[1][i][J_max - 3]/u[0][i][J_max - 3];
+    vvel = u[2][i][J_max - 3]/u[0][i][J_max - 3];
+    
+    // Compute u dot n (normal component of velocity)
+    uin = uvel*nx + vvel*ny; // interior
+    u0n = u_0*nx; // infty
+
+    // Computer u tangential
+    //uit = uvel*ny - vvel*nx; // interior
+    u0t = u_0*ny; // infty
+    
+    // Compute interior speed of sound
+    ci = sqrt((gamma - 1)*(u[3][i][J_max - 3]/u[0][i][J_max - 3]
+			   - 0.5*(uvel*uvel + vvel*vvel)));
+    
+    // Compute interior pressure
+    pi = u[0][i][J_max - 3]*ci;
     
     // Continue as inflow or outflow
-    if (s < 0) { // inflow BC
-      // 
+    if (ui > 0) { // inflow BC
+      // Compute R_inf (infty, plus)
+      // and R_int (interior, minus)
+      R_inf = abs(u0n) + 2.0/(gamma - 1.0)*c_0;
+      R_int = abs(uin) - 2.0/(gamma - 1.0)*ci;
     }
+    
+    if (ui < 0) { // outflow BC
+      // Compute R_inf (infty, minus)
+      // and R_int (interior, plus)
+      R_inf = -1.0*abs(u0n) - 2.0/(gamma - 1.0)*c_0;
+      R_int = -1.0*abs(uin) + 2.0/(gamma - 1.0)*ci;
+    }
+    
+    // Compute Primitive Boundary Values
+    unb = 0.5*(R_inf + R_int);
+    cb = 0.25*(gamma - 1.0)*(R_inf - R_int);
+    rhob = pow(p_0/(pow(rho_0, gamma)*cb*cb), 1./(gamma - 1.0));
+    pb = rhob*cb*cb;
+    
+    // Compute Conserved Boundary Values
+    // density
+    u[0][i][J_max - 1] = rhob;
+    // x velocity
+    u[1][i][J_max - 1] = rhob*(unb*nx - u0t*nx);
+    // y velocity
+    u[2][i][J_max - 1] = rhob*(unb*ny + u0t*ny);
+    // Energy
+    u[3][i][J_max - 1] = rhob*((1./(gamma - 1.0))*(pb/rhob)
+			        + 0.5*(unb*unb + u0t*u0t));
   }
 }
 
@@ -289,6 +346,7 @@ int main()
     double v_0      = 0.;
     double c_0      = 300.;
     double E_0      = 193.;
+    double p_0      = rho_0*(gamma - 1.0)*(E_0 - 0.5*u_0*u_0);
     
     ////// Allocate all global vectors that will be used throughout sim
     int N_row = 129;

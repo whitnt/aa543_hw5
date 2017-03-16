@@ -58,8 +58,6 @@ void createCellCentPoints(  std::vector<std::vector<double> > &x,
             y[i][j] = 0.25*(grid_y[i][j] + grid_y[i+1][j] + grid_y[i][j+1] + grid_y[i+1][j+1]);
         }
     }
-    
-    // add ghost cells
 }
 
 
@@ -319,11 +317,13 @@ int main()
     std::vector< std::vector<double> > dsj_x;
     std::vector< std::vector<double> > dsj_y;
     // Conserved variables
+    std::vector< std::vector<double> > u_temp;
     std::vector< std::vector< std::vector<double> > > u;
     
     ////// Size the vectors
     std::vector<double> col (N_col); // For vectors that hold verticie values
     std::vector<double> colm (N_col-1); // For vectors that hold cell centered values
+    std::vector<double> colp (N_col+1); // For vectors with ghost cells (just u)
     grid_x.push_back(col);
     grid_y.push_back(col);
     
@@ -337,10 +337,12 @@ int main()
         dsi_y.push_back(colm);
         dsj_x.push_back(colm);
         dsj_y.push_back(colm);
+        u_temp.push_back(colp);
     }
     
+    // create u vector (N_col+1 -> airfoil ghost cell, N_col+2 -> exterior ghost cell)
     for (int var = 0; var<vars; var++){
-        u.push_back(x);
+        u.push_back();
     }
     
     // Prep work:

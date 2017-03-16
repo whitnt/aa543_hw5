@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 #include <cmath>
+#include <algorithm>
 #include <vector>
 #include <cstdlib>
 
@@ -23,8 +24,8 @@ void readGrid(std::vector<std::vector<double> > &grid_x,
     int I_max = grid_x.size();
     int J_max = grid_x[0].size();
     
-    std::ifstream x_file("grid_x.dat");
-    std::ifstream y_file("grid_y.dat");
+    std::ifstream x_file("output/grid_x.dat");
+    std::ifstream y_file("output/grid_y.dat");
     
     float x, y;
     for (int j = 0; j < J_max; j++) {
@@ -49,11 +50,9 @@ void createCellCentPoints(  std::vector<std::vector<double> > &x,
                             const std::vector<std::vector<double> > grid_y)
 {
     // Uses grid points to calculate location of points at cell centers
-    int I_max = x.size();
-    int J_max = x[0].size();
     
-    for (int i = 0; i < I_max; i++) {
-         for (int j = 0; j < J_max; j++) {
+    for (int i = 0; i < x.size(); i++) {
+         for (int j = 0; j < x[0].size(); j++) {
             x[i][j] = 0.25*(grid_x[i][j] + grid_x[i+1][j] + grid_x[i][j+1] + grid_x[i+1][j+1]);
             y[i][j] = 0.25*(grid_y[i][j] + grid_y[i+1][j] + grid_y[i][j+1] + grid_y[i+1][j+1]);
         }
@@ -114,16 +113,47 @@ void computeCellNormals(std::vector<std::vector<double> > &dsi_x,
     //      dsj are normals on walls that connect verticies of increasing j
     //          and correspond to delta s_(i,j-1/2).
     
-    int I_max = dsi_x.size();
-    int J_max = dsi_x[0].size();
+    // Do dsi_x and dsi_y first
+    for (int i = 0; i < dsi_x.size(); i++) {
+        for (int j = 0; j < dsi_x[0].size(); j++) {
+        // Calculate them
+        dsi_x[i][j] = (grid_y[i+1][j] - grid_y[i][j]);
+        dsi_y[i][j] = -1.0*(grid_x[i+1][j] - grid_x[i][j]); // Modified w/ -1
+        }
+    }
     
-    for (int i = 0; i < I_max; i++) {
-        for (int j = 0; j < J_max; j++) {
-	  // Calculate them
-	  dsi_x[i][j] = (grid_y[i+1][j] - grid_y[i][j]);
-	  dsi_y[i][j] = -1.0*(grid_x[i+1][j] - grid_x[i][j]); // Modified w/ -1
-	  dsj_x[i][j] = (grid_y[i][j+1] - grid_y[i][j]);
-	  dsj_y[i][j] = -1.0*(grid_x[i][j+1] - grid_x[i][j]); // Modified w/ -1
+    // then do dsj_x and dsj_y
+    for (int i = 0; i < dsj_x.size(); i++) {
+        for (int j = 0; j < dsj_x[0].size(); j++) {
+        // Calculate them
+        dsj_x[i][j] = (grid_y[i][j+1] - grid_y[i][j]);
+        dsj_y[i][j] = -1.0*(grid_x[i][j+1] - grid_x[i][j]); // Modified w/ -1
+        }
+    }
+}
+
+void writeCellNormals(const std::vector<std::vector<double> > &dsi_x,
+                      const std::vector<std::vector<double> > &dsi_y,
+                      const std::vector<std::vector<double> > &dsj_x,
+                      const std::vector<std::vector<double> > &dsj_y)
+{
+    // Write out coordinates of cell centered points
+    std::ofstream ix_file("output/dsi_x.dat");
+    std::ofstream iy_file("output/dsi_y.dat");
+    std::ofstream jx_file("output/dsj_x.dat");
+    std::ofstream jy_file("output/dsj_y.dat");
+    
+    for (int i=0; i < dsi_x.size();i++) {
+         for (int j=0; j < dsi_x[0].size();j++) {
+            ix_file << dsi_x[i][j] << std::endl;
+            iy_file << dsi_y[i][j] << std::endl;
+        }
+    }
+
+    for (int i=0; i < dsj_x.size();i++) {
+         for (int j=0; j < dsj_x[0].size();j++) {
+            jx_file << dsj_x[i][j] << std::endl;
+            jy_file << dsj_y[i][j] << std::endl;
         }
     }
 }
@@ -133,13 +163,11 @@ void setIC(std::vector< std::vector< std::vector<double> > > &u,
             const double E_0)
 {
     // Set initial condition: u[i][j][var] = u @ infinity
-    int I_max = u[0].size();
-    int J_max = u[0][0].size();
     
     //~ std::cout << "I'm in the IC function!" << std::endl;
     //~ std::cout << rho_0 << u_0 << E_0 << std::endl;
-    for (int i=0; i<I_max;i++) {
-        for (int j=0; j<J_max;j++) {
+    for (int i=0; i<u[0].size();i++) {
+        for (int j=0; j<u[0][0].size();j++) {
             u[0][i][j] = rho_0;
             u[1][i][j] = rho_0*u_0;
             u[2][i][j] = rho_0*v_0;
@@ -162,7 +190,7 @@ void writeOutput(const std::vector<std::vector<std::vector<double> > > &u)
     std::ofstream rho_E ("output/rho_E.dat");
     
     for (int i=0; i<I_max;i++) {
-        for (int j=0; j<J_max;j++) {
+        for (int j=0; j<J_max-2;j++) {
             rho     << u[0][i][j] << std::endl;
             rho_u   << u[1][i][j] << std::endl;
             rho_v   << u[2][i][j] << std::endl;
@@ -190,24 +218,26 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
     std::vector<std::vector<double> > nuj(omega);
 
     // Initialize "D" viscosity vectors
-    std::vector<std::vector<std::vector<double> > > dpi12(omega);
-    std::vector<std::vector<std::vector<double> > > dmi12(omega);
-    std::vector<std::vector<std::vector<double> > > dpj12(omega);
-    std::vector<std::vector<std::vector<double> > > dmj12(omega);
+    //~ std::vector<std::vector<std::vector<double> > > dpi12(omega);
+    //~ std::vector<std::vector<std::vector<double> > > dmi12(omega);
+    //~ std::vector<std::vector<std::vector<double> > > dpj12(omega);
+    //~ std::vector<std::vector<std::vector<double> > > dmj12(omega);
     
     // Calculate and store cell centered fluxes
-    for (int i; i < u[0].size(); i++){
-        for (int j; j < u[0][0].size(); j++) {
+    for (int i=0; i < u[0].size(); i++){
+        for (int j=0; j < u[0][0].size()-2; j++) {
             // Create temp variables for readability
             double u_0 = u[0][i][j];
             double u_1 = u[1][i][j];
             double u_2 = u[2][i][j];
             double u_3 = u[3][i][j];
+            
             p[i][j] = (gamma - 1.)*(u_3 - 0.5*(u_1*u_1 + u_2*u_2)/u_0);
-	    sound[i][j] = sqrt(p[i][j]/u_0);
+            sound[i][j] = sqrt(p[i][j]/u_0);
             
             // Calculate fluxes
             F[0][i][j] = u_1;
+            std::cout << F[0][i][j] << std::endl;
             F[1][i][j] = u_1*u_1/u_0 + p[i][j];
             F[2][i][j] = u_1*u_2/u_0;
             F[3][i][j] = u_1*(u_3 + p[i][j])/u_0;
@@ -217,15 +247,16 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             G[3][i][j] = u_2*(u_3 + p[i][j])/u_0;
         }
     }
+    writeOutput(F);
     
-    // double eps2pi12(omega);
-    // double eps2mi12(omega);
-    // double eps2pj12(omega);
-    // double eps2mj12(omega);
-    // double eps4pi12(omega);
-    // double eps4mi12(omega);
-    // double eps4pj12(omega);
-    // double eps4mj12(omega);
+    //~ double eps2pi12(omega);
+    //~ double eps2mi12(omega);
+    //~ double eps2pj12(omega);
+    //~ double eps2mj12(omega);
+    //~ double eps4pi12(omega);
+    //~ double eps4mi12(omega);
+    //~ double eps4pj12(omega);
+    //~ double eps4mj12(omega);
     
     ////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////
@@ -235,283 +266,353 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
     // Calculate the "nu" values for epsilon viscosity parameters
     // Normalized pressure gradient
     // NEEDS: Boundary Info
-    for (int i = 1; i < (u[0].size() - 1); i++) {
-      for (int j = 1; j < (u[0][0].size() - 1); j++) {
-	nui[i][j] = abs(p[i+1][j] - 2.0*p[i][j] + p[i-1][j])/
-	  (p[i+1][j] + 2.0*p[i][j] + p[i-1][j]);
-	nuj[i][j] = abs(p[i][j+1] - 2.0*p[i][j] + p[i][j-1])/
-	  (p[i][j+1] + 2.0*p[i][j] + p[i][j-1]);
-      }
-    }
+    //~ for (int i = 1; i < (u[0].size() - 1); i++) {
+      //~ for (int j = 1; j < (u[0][0].size() - 1); j++) {
+	//~ nui[i][j] = abs(p[i+1][j] - 2.0*p[i][j] + p[i-1][j])/
+	  //~ (p[i+1][j] + 2.0*p[i][j] + p[i-1][j]);
+	//~ nuj[i][j] = abs(p[i][j+1] - 2.0*p[i][j] + p[i][j-1])/
+	  //~ (p[i][j+1] + 2.0*p[i][j] + p[i][j-1]);
+      //~ }
+    //~ }
     
-    int iSZ = u[0].size() - 1; // For indexing in periodic/ghost fixes
-    int jSZ = u[0][0].size() - 3; // For indexing in periodic/ghost fixes
-    // Calculate the D viscosity parameters for cell interfaces
-    for (int i = 0; i < u[0].size(); i++) {
-      for (int j = 0; (j < u[0][0].size() - 2); j++) {
-	double u_ij = u[1][i][j]/u[0][i][j];
-	double v_ij = u[2][i][j]/u[0][i][j];
-	//////////////////////////////////////////////////////////////////////////////
-	///////////////// CALCULATION FOR I'S ////////////////////////////////////////
-	///////////////////////////////////////////////// CALCULATION FOR DPI12, DMI12
-	//////////////////////////////////////////////////////////////////////////////
-	//////////////////////////////////////////////////////////////////////////////
-	//////////////////////////////////////////////////////////////////////////////
-	// Calculate epsilon parameters
-	// Epsilon2 calc
-	if ( i == 0 ) { // Periodic "i" Fix
-	  // Wave Speed PLUS
-	  double wave_ip12 = u_ij*dsj_x[i+1][j] + v_ij*dsj_y[i+1][j] +
-	    sound[i][j]*sqrt(dsj_x[i+1][j]*dsj_x[i+1][j] + dsj_y[i+1][j]*dsj_y[i+1][j]);
-	  // Wave Speed MINUS
-	  double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
-	    sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
-	  // Epsilon12 PLUS
-	  double eps2pi12 = 0.5*0.25*wave_ip12*
-	    std::max(nui[iSZ][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
-	  // Epsilon12 MINUS
-	  double eps2mi12 = 0.5*0.25*wave_im12*
-	    std::max(nui[iSZ][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
-	}
-	if ( i == u[0].size() - 2 ) { // Periodic "i" Fix
-	  // Wave speed PLUS
-	  double wave_ip12 = u_ij*dsj_x[i+1][j] + v_ij*dsj_y[i+1][j] +
-	    sound[i][j]*sqrt(dsj_x[i+1][j]*dsj_x[i+1][j] + dsj_y[i+1][j]*dsj_y[i+1][j]);
-	  // Wave Speed MINUS
-	  double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
-	    sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
-	  // Epsilon12 PLUS
-	  double eps2pi12 = 0.5*0.25*wave_ip12*
-	    std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[0][j]);
-	  // Epsilon12 MINUS
-	  double eps2mi12 = 0.5*0.25*wave_im12*
-	    std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
-	}
-	if ( i == u[0].size() - 1 ) { // Periodic "i" Fix
-	  // Wave speed PLUS
-	  double wave_ip12 = u_ij*dsj_x[0][j] + v_ij*dsj_y[0][j] +
-	    sound[i][j]*sqrt(dsj_x[0][j]*dsj_x[0][j] + dsj_y[0][j]*dsj_y[0][j]);
-	  // Wave Speed MINUS
-	  double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
-	    sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
-	  // Epsilon12 PLUS
-	  double eps2pi12 = 0.5*0.25*wave_ip12*
-	    std::max(nui[i-1][j], nui[i][j], nui[0][j], nui[1][j]);
-	  // Epsilon12 MINUS
-	  double eps2pi12 = 0.5*0.25*wave_im12*
-	    std::max(nui[i-1][j], nui[i][j], nui[0][j], nui[1][j]);
-	}
-	else { // no need for periodic fix
-	  // Wave speed PLUS
-	  double wave_ip12 = u_ij*dsj_x[i+1][j] + v_ij*dsj_y[i+1][j] +
-	    sound[i][j]*sqrt(dsj_x[i+1][j]*dsj_x[i+1][j] + dsj_y[i+1][j]*dsj_y[i+1][j]);
-	  // Wave Speed MINUS
-	  double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
-	    sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
-	  // Epsilon12 PLUS
-	  double eps2pi12 = 0.5*0.25*wave_ip12*
-	    std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
-	  // Epsilon12 MINUS
-	  double eps2mi12 = 0.5*0.25*wave_im12*
-	    std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
-	}
+    //~ int iSZ = u[0].size() - 1; // For indexing in periodic/ghost fixes
+    //~ int jSZ = u[0][0].size() - 3; // For indexing in periodic/ghost fixes
+    //~ // Calculate the D viscosity parameters for cell interfaces
+    //~ for (int i = 0; i < u[0].size(); i++) {
+      //~ for (int j = 0; (j < u[0][0].size() - 2); j++) {
+	//~ double u_ij = u[1][i][j]/u[0][i][j];
+	//~ double v_ij = u[2][i][j]/u[0][i][j];
+	//~ //////////////////////////////////////////////////////////////////////////////
+	//~ ///////////////// CALCULATION FOR I'S ////////////////////////////////////////
+	//~ ///////////////////////////////////////////////// CALCULATION FOR DPI12, DMI12
+	//~ //////////////////////////////////////////////////////////////////////////////
+	//~ //////////////////////////////////////////////////////////////////////////////
+	//~ //////////////////////////////////////////////////////////////////////////////
+	//~ // Calculate epsilon parameters
+	//~ // Epsilon2 calc
+	//~ if ( i == 0 ) { // Periodic "i" Fix
+	  //~ // Wave Speed PLUS
+	  //~ double wave_ip12 = u_ij*dsj_x[i+1][j] + v_ij*dsj_y[i+1][j] +
+	    //~ sound[i][j]*sqrt(dsj_x[i+1][j]*dsj_x[i+1][j] + dsj_y[i+1][j]*dsj_y[i+1][j]);
+	  //~ // Wave Speed MINUS
+	  //~ double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
+	    //~ sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
+	  //~ // Epsilon12 PLUS
+	  //~ double eps2pi12 = 0.5*0.25*wave_ip12*
+	    //~ std::max(nui[iSZ][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
+	  //~ // Epsilon12 MINUS
+	  //~ double eps2mi12 = 0.5*0.25*wave_im12*
+	    //~ std::max(nui[iSZ][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
+	//~ }
+	//~ if ( i == u[0].size() - 2 ) { // Periodic "i" Fix
+	  //~ // Wave speed PLUS
+	  //~ double wave_ip12 = u_ij*dsj_x[i+1][j] + v_ij*dsj_y[i+1][j] +
+	    //~ sound[i][j]*sqrt(dsj_x[i+1][j]*dsj_x[i+1][j] + dsj_y[i+1][j]*dsj_y[i+1][j]);
+	  //~ // Wave Speed MINUS
+	  //~ double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
+	    //~ sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
+	  //~ // Epsilon12 PLUS
+	  //~ double eps2pi12 = 0.5*0.25*wave_ip12*
+	    //~ std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[0][j]);
+	  //~ // Epsilon12 MINUS
+	  //~ double eps2mi12 = 0.5*0.25*wave_im12*
+	    //~ std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
+	//~ }
+	//~ if ( i == u[0].size() - 1 ) { // Periodic "i" Fix
+	  //~ // Wave speed PLUS
+	  //~ double wave_ip12 = u_ij*dsj_x[0][j] + v_ij*dsj_y[0][j] +
+	    //~ sound[i][j]*sqrt(dsj_x[0][j]*dsj_x[0][j] + dsj_y[0][j]*dsj_y[0][j]);
+	  //~ // Wave Speed MINUS
+	  //~ double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
+	    //~ sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
+	  //~ // Epsilon12 PLUS
+	  //~ double eps2pi12 = 0.5*0.25*wave_ip12*
+	    //~ std::max(nui[i-1][j], nui[i][j], nui[0][j], nui[1][j]);
+	  //~ // Epsilon12 MINUS
+	  //~ double eps2pi12 = 0.5*0.25*wave_im12*
+	    //~ std::max(nui[i-1][j], nui[i][j], nui[0][j], nui[1][j]);
+	//~ }
+	//~ else { // no need for periodic fix
+	  //~ // Wave speed PLUS
+	  //~ double wave_ip12 = u_ij*dsj_x[i+1][j] + v_ij*dsj_y[i+1][j] +
+	    //~ sound[i][j]*sqrt(dsj_x[i+1][j]*dsj_x[i+1][j] + dsj_y[i+1][j]*dsj_y[i+1][j]);
+	  //~ // Wave Speed MINUS
+	  //~ double wave_im12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
+	    //~ sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]*dsj_y[i][j]);
+	  //~ // Epsilon12 PLUS
+	  //~ double eps2pi12 = 0.5*0.25*wave_ip12*
+	    //~ std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
+	  //~ // Epsilon12 MINUS
+	  //~ double eps2mi12 = 0.5*0.25*wave_im12*
+	    //~ std::max(nui[i-1][j], nui[i][j], nui[i+1][j], nui[i+2][j]);
+	//~ }
 	
-	// Epsilon4 calc PLUS
-	double eps4pi12 = std::max(0, 0.5*0.003906*wave_ip12 - eps2pi12);
-	// Epsilon4 calc MINUS
-	double eps4mi12 = std::max(0, 0.5*0.003906*wave_im12 - eps2mi12);
+	//~ // Epsilon4 calc PLUS
+	//~ double eps4pi12 = std::max(0, 0.5*0.003906*wave_ip12 - eps2pi12);
+	//~ // Epsilon4 calc MINUS
+	//~ double eps4mi12 = std::max(0, 0.5*0.003906*wave_im12 - eps2mi12);
 	
-	// dpi12 calc
-	if ( i == 0 ) { // Periodic Fix
-	  // DPI12 (plus)
-	  for (int k = 0; k < 3; k++) {
-	    dpi12[k][i][j] = eps2pi12*(u[k][i+1][j] - u[k][i][j])
-	      - eps4pi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
-			  + 3.0*u[k][i][j] - u[k][iSZ][j]);
-	  }
-	  // DMI12 (minus)
-	  for (int k = 0; k < 3; k++) {
-	    dmi12[k][i][j] = eps2mi12*(u[k][i+1][j] - u[k][i][j])
-	      - eps4mi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
-			  + 3.0*u[k][i][j] - u[k][iSZ][j]);
-	  }
-	}
-	if ( i == u[0].size() - 2 ) { // Periodic Fix
-	  // DPI12 (plus)
-	  for (int k = 0; k < 3; k++) {
-	    dpi12[k][i][j] = eps2pi12*(u[k][i+1][j] - u[k][i][j])
-	      - eps4pi12*(u[k][0][j] - 3.0*u[k][i+1][j]
-			  + 3.0*u[k][i][j] - u[k][i-1][j]);
-	  }
-	  // DMI12 (minus)
-	  for (int k = 0; k < 3; k++) {
-	    dmi12[k][i][j] = eps2mi12*(u[k][i+1][j] - u[k][i][j])
-	      - eps4mi12*(u[k][0][j] - 3.0*u[k][i+1][j]
-			  + 3.0*u[k][i][j] - u[k][i-1][j]);
-	  }
-    	}
-	if ( i == u[0].size() - 1 ) { // Periodic Fix
-	  // DPI12 (plus)
-	  for (int k = 0; k < 3; k++) {
-	    dpi12[k][i][j] = eps2pi12*(u[k][0][j] - u[k][i][j])
-	      - eps4pi12*(u[k][1][j] - 3.0*u[k][0][j]
-			  + 3.0*u[k][i][j] - u[k][i-1][j]);
-	  }
-	  // DMI12 (minus)
-	  for (int k = 0; k < 3; k++) {
-	    dmi12[k][i][j] = eps2mi12*(u[k][0][j] - u[k][i][j])
-	      - eps4mi12*(u[k][1][j] - 3.0*u[k][0][j]
-			  + 3.0*u[k][i][j] - u[k][i-1][j]);
-	  }
-    	}
-	else { // no need for periodic fix
-	  // DPI12 (plus)
-	  for (int k = 0; k < 3; k++) {
-	    dpi12[k][i][j] = eps2pi12*(u[k][i+1][j] - u[k][i][j])
-	      - eps4pi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
-			  + 3.0*u[k][i][j] - u[k][i-1][j]);
-	  }
-	  // DMI12 (minus)
-	  for (int k = 0; k < 3; k++) {
-	    dmi12[k][i][j] = eps2mi12*(u[k][i+1][j] - u[k][i][j])
-	      - eps4mi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
-			  + 3.0*u[k][i][j] - u[k][i-1][j]);
-	  }
-	}
+	//~ // dpi12 calc
+	//~ if ( i == 0 ) { // Periodic Fix
+	  //~ // DPI12 (plus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dpi12[k][i][j] = eps2pi12*(u[k][i+1][j] - u[k][i][j])
+	      //~ - eps4pi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
+			  //~ + 3.0*u[k][i][j] - u[k][iSZ][j]);
+	  //~ }
+	  //~ // DMI12 (minus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dmi12[k][i][j] = eps2mi12*(u[k][i+1][j] - u[k][i][j])
+	      //~ - eps4mi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
+			  //~ + 3.0*u[k][i][j] - u[k][iSZ][j]);
+	  //~ }
+	//~ }
+	//~ if ( i == u[0].size() - 2 ) { // Periodic Fix
+	  //~ // DPI12 (plus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dpi12[k][i][j] = eps2pi12*(u[k][i+1][j] - u[k][i][j])
+	      //~ - eps4pi12*(u[k][0][j] - 3.0*u[k][i+1][j]
+			  //~ + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  //~ }
+	  //~ // DMI12 (minus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dmi12[k][i][j] = eps2mi12*(u[k][i+1][j] - u[k][i][j])
+	      //~ - eps4mi12*(u[k][0][j] - 3.0*u[k][i+1][j]
+			  //~ + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  //~ }
+    	//~ }
+	//~ if ( i == u[0].size() - 1 ) { // Periodic Fix
+	  //~ // DPI12 (plus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dpi12[k][i][j] = eps2pi12*(u[k][0][j] - u[k][i][j])
+	      //~ - eps4pi12*(u[k][1][j] - 3.0*u[k][0][j]
+			  //~ + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  //~ }
+	  //~ // DMI12 (minus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dmi12[k][i][j] = eps2mi12*(u[k][0][j] - u[k][i][j])
+	      //~ - eps4mi12*(u[k][1][j] - 3.0*u[k][0][j]
+			  //~ + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  //~ }
+    	//~ }
+	//~ else { // no need for periodic fix
+	  //~ // DPI12 (plus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dpi12[k][i][j] = eps2pi12*(u[k][i+1][j] - u[k][i][j])
+	      //~ - eps4pi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
+			  //~ + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  //~ }
+	  //~ // DMI12 (minus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dmi12[k][i][j] = eps2mi12*(u[k][i+1][j] - u[k][i][j])
+	      //~ - eps4mi12*(u[k][i+2][j] - 3.0*u[k][i+1][j]
+			  //~ + 3.0*u[k][i][j] - u[k][i-1][j]);
+	  //~ }
+	//~ }
 	
-	//////////////////////////////////////////////////////////////////////////////
-	///////////////// CALCULATION FOR J'S ////////////////////////////////////////
-	////////////////////////////////////////////// CALCULATION FOR DPJ12, DMJ12 //
-	//////////////////////////////////////////////////////////////////////////////
-	//////////////////////////////////////////////////////////////////////////////
-	/////////////////////////////////// CALCULATION FOR DPJ12 and DMJ12 //////////
-	//////////////////////////////////////////////////////////////////////////////
-	// Epsilon2 calc
-	if ( j == 0 ) { // Double Ghost Fix
-	  // Wave Speed PLUS
-	  double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
-	    sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]);
-	  // Wave Speed MINUS
-	  double wave_jm12 = -u_ij*dsi_x[i][j] - v_ij*dsi_y[i][j] +
-	    sound[i][j]*sqrt(dsi_x[i][j]*dsi_x[i][j] + dsi_y[i][j]*dsi_y[i][j]);
-	  // Epsilon12 PLUS
-	  double eps2pj12 = 0.5*0.25*wave_jp12*
-	    std::max(nuj[i][jSZ - 2], nuj[i][j], nuj[i][j+1], nuj[i][j+2]); // CHECK
-	  // Epsilon12 MINUS
-	  double eps2mj12 = 0.5*0.25*wave_jm12*
-	    std::max(nuj[i][jSZ - 2], nuj[i][j], nuj[i][j+1], nuj[i][j+2]); // CHECK
-	}
-	if ( j == u[0][0].size() - 3 ) { // Double Ghost Fix
-	  // Wave speed PLUS
-	  double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
-	    sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]); // CHECK
-	  // Wave Speed MINUS
-	  double wave_jm12 = -u_ij*dsi_x[i][j] - v_ij*dsi_y[i][j] +
-	    sound[i][j]*sqrt(dsi_x[i][j]*dsi_x[i][j] + dsi_y[i][j]*dsi_y[i][j]);
-	  // Epsilon12 PLUS
-	  double eps2pj12 = 0.5*0.25*wave_jp12*
-	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[i][j + 1]);
-	  // Epsilon12 MINUS
-	  double eps2mj12 = 0.5*0.25*wave_jm12*
-	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[i][j + 1]);
-	}
-	if ( j == u[0][0].size() - 4 ) { // Double Ghost Fix
-	  // Wave speed PLUS
-	  double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
-	    sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]);
-	  // Wave Speed MINUS
-	  double wave_jm12 = -u_ij*dsi_x[i][j] - v_ij*dsi_y[i][j] +
-	    sound[i][j]*sqrt(dsi_x[i][j]*dsi_x[i][j] + dsi_y[i][j]*dsi_y[i][j]);
-	  // Epsilon12 PLUS
-	  double eps2pj12 = 0.5*0.25*wave_jp12*
-	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[1][j + 2]);
-	  // Epsilon12 MINUS
-	  double eps2pj12 = 0.5*0.25*wave_jm12*
-	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[1][j + 2]);
-	}
-	else { // no need for ghost fix
-	  // Wave speed PLUS
-	  double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
-	    sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]);
-	  // Wave Speed MINUS
-	  double wave_jm12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
-	    sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]dsj_y[i][j]);
-	  // Epsilon12 PLUS
-	  double eps2pj12 = 0.5*0.25*wave_jp12*
-	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j+1], nuj[i][j+2]);
-	  // Epsilon12 MINUS
-	  double eps2mj12 = 0.5*0.25*wave_jm12*
-	    std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j+1], nuj[i][j+2]);
-	}
+	//~ //////////////////////////////////////////////////////////////////////////////
+	//~ ///////////////// CALCULATION FOR J'S ////////////////////////////////////////
+	//~ ////////////////////////////////////////////// CALCULATION FOR DPJ12, DMJ12 //
+	//~ //////////////////////////////////////////////////////////////////////////////
+	//~ //////////////////////////////////////////////////////////////////////////////
+	//~ /////////////////////////////////// CALCULATION FOR DPJ12 and DMJ12 //////////
+	//~ //////////////////////////////////////////////////////////////////////////////
+	//~ // Epsilon2 calc
+	//~ if ( j == 0 ) { // Double Ghost Fix
+	  //~ // Wave Speed PLUS
+	  //~ double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
+	    //~ sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]);
+	  //~ // Wave Speed MINUS
+	  //~ double wave_jm12 = -u_ij*dsi_x[i][j] - v_ij*dsi_y[i][j] +
+	    //~ sound[i][j]*sqrt(dsi_x[i][j]*dsi_x[i][j] + dsi_y[i][j]*dsi_y[i][j]);
+	  //~ // Epsilon12 PLUS
+	  //~ double eps2pj12 = 0.5*0.25*wave_jp12*
+	    //~ std::max(nuj[i][jSZ - 2], nuj[i][j], nuj[i][j+1], nuj[i][j+2]); // CHECK
+	  //~ // Epsilon12 MINUS
+	  //~ double eps2mj12 = 0.5*0.25*wave_jm12*
+	    //~ std::max(nuj[i][jSZ - 2], nuj[i][j], nuj[i][j+1], nuj[i][j+2]); // CHECK
+	//~ }
+	//~ if ( j == u[0][0].size() - 3 ) { // Double Ghost Fix
+	  //~ // Wave speed PLUS
+	  //~ double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
+	    //~ sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]); // CHECK
+	  //~ // Wave Speed MINUS
+	  //~ double wave_jm12 = -u_ij*dsi_x[i][j] - v_ij*dsi_y[i][j] +
+	    //~ sound[i][j]*sqrt(dsi_x[i][j]*dsi_x[i][j] + dsi_y[i][j]*dsi_y[i][j]);
+	  //~ // Epsilon12 PLUS
+	  //~ double eps2pj12 = 0.5*0.25*wave_jp12*
+	    //~ std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[i][j + 1]);
+	  //~ // Epsilon12 MINUS
+	  //~ double eps2mj12 = 0.5*0.25*wave_jm12*
+	    //~ std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[i][j + 1]);
+	//~ }
+	//~ if ( j == u[0][0].size() - 4 ) { // Double Ghost Fix
+	  //~ // Wave speed PLUS
+	  //~ double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
+	    //~ sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]);
+	  //~ // Wave Speed MINUS
+	  //~ double wave_jm12 = -u_ij*dsi_x[i][j] - v_ij*dsi_y[i][j] +
+	    //~ sound[i][j]*sqrt(dsi_x[i][j]*dsi_x[i][j] + dsi_y[i][j]*dsi_y[i][j]);
+	  //~ // Epsilon12 PLUS
+	  //~ double eps2pj12 = 0.5*0.25*wave_jp12*
+	    //~ std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[1][j + 2]);
+	  //~ // Epsilon12 MINUS
+	  //~ double eps2pj12 = 0.5*0.25*wave_jm12*
+	    //~ std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j + 1], nuj[1][j + 2]);
+	//~ }
+	//~ else { // no need for ghost fix
+	  //~ // Wave speed PLUS
+	  //~ double wave_jp12 = u_ij*dsi_x[i][j+1] + v_ij*dsi_y[i][j+1] +
+	    //~ sound[i][j]*sqrt(dsi_x[i][j+1]*dsi_x[i][j+1] + dsi_y[i][j+1]*dsi_y[i][j+1]);
+	  //~ // Wave Speed MINUS
+	  //~ double wave_jm12 = -u_ij*dsj_x[i][j] - v_ij*dsj_y[i][j] +
+	    //~ sound[i][j]*sqrt(dsj_x[i][j]*dsj_x[i][j] + dsj_y[i][j]dsj_y[i][j]);
+	  //~ // Epsilon12 PLUS
+	  //~ double eps2pj12 = 0.5*0.25*wave_jp12*
+	    //~ std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j+1], nuj[i][j+2]);
+	  //~ // Epsilon12 MINUS
+	  //~ double eps2mj12 = 0.5*0.25*wave_jm12*
+	    //~ std::max(nuj[i][j - 1], nuj[i][j], nuj[i][j+1], nuj[i][j+2]);
+	//~ }
 	
-	// Epsilon4 calc PLUS
-	double eps4pj12 = std::max(0, 0.5*0.003906*wave_jp12 - eps2pj12);
-	// Epsilon4 calc MINUS
-	double eps4mj12 = std::max(0, 0.5*0.003906*wave_jm12 - eps2mj12);
+	//~ // Epsilon4 calc PLUS
+	//~ double eps4pj12 = std::max(0, 0.5*0.003906*wave_jp12 - eps2pj12);
+	//~ // Epsilon4 calc MINUS
+	//~ double eps4mj12 = std::max(0, 0.5*0.003906*wave_jm12 - eps2mj12);
 	
-	// dpj12 calc
-	if ( j == 0 ) { // Ghost Fix
-	  // DPJ12 (plus)
-	  for (int k = 0; k < 3; k++) {
-	    dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
-	      - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
-			  + 3.0*u[k][i][j] - u[k][i][j-1]);
-	  }
-	  // DMJ12 (minus)
-	  for (int k = 0; k < 3; k++) {
-	    dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
-	      - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
-			  + 3.0*u[k][i][j] - u[k][i][j-1]);
-	  }
-	}
-	if ( j == u[0][0].size() - 4 ) { // Ghost Fix
-	  // DPJ12 (plus)
-	  for (int k = 0; k < 3; k++) {
-	    dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
-	      - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
-			  + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
-	  }
-	  // DMJ12 (minus)
-	  for (int k = 0; k < 3; k++) {
-	    dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
-	      - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
-			  + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
-	  }
-    	}
-	if ( j == u[0][0].size() - 3 ) { // Ghost Fix
-	  // DPJ12 (plus)
-	  for (int k = 0; k < 3; k++) {
-	    dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
-	      - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
-			  + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
-	  }
-	  // DMJ12 (minus)
-	  for (int k = 0; k < 3; k++) {
-	    dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
-	      - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
-			  + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
-	  }
-    	}
-	else { // no need for ghost fix
-	  // DPJ12 (plus)
-	  for (int k = 0; k < 3; k++) {
-	    dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
-	      - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
-			  + 3.0*u[k][i][j] - u[k][i][j-1]);
-	  }
-	  // DMJ12 (minus)
-	  for (int k = 0; k < 3; k++) {
-	    dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
-	      - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
-			  + 3.0*u[k][i][j] - u[k][i][j-1]);
-	  }
-	}
+	//~ // dpj12 calc
+	//~ if ( j == 0 ) { // Ghost Fix
+	  //~ // DPJ12 (plus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
+	      //~ - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  //~ + 3.0*u[k][i][j] - u[k][i][j-1]);
+	  //~ }
+	  //~ // DMJ12 (minus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
+	      //~ - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  //~ + 3.0*u[k][i][j] - u[k][i][j-1]);
+	  //~ }
+	//~ }
+	//~ if ( j == u[0][0].size() - 4 ) { // Ghost Fix
+	  //~ // DPJ12 (plus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
+	      //~ - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  //~ + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
+	  //~ }
+	  //~ // DMJ12 (minus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
+	      //~ - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  //~ + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
+	  //~ }
+    	//~ }
+	//~ if ( j == u[0][0].size() - 3 ) { // Ghost Fix
+	  //~ // DPJ12 (plus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
+	      //~ - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  //~ + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
+	  //~ }
+	  //~ // DMJ12 (minus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
+	      //~ - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  //~ + 3.0*u[k][i][j] - u[k][i][j-1]); // CHECK
+	  //~ }
+    	//~ }
+	//~ else { // no need for ghost fix
+	  //~ // DPJ12 (plus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dpj12[k][i][j] = eps2pj12*(u[k][i][j+1] - u[k][i][j])
+	      //~ - eps4pj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  //~ + 3.0*u[k][i][j] - u[k][i][j-1]);
+	  //~ }
+	  //~ // DMJ12 (minus)
+	  //~ for (int k = 0; k < 3; k++) {
+	    //~ dmj12[k][i][j] = eps2mj12*(u[k][i][j+1] - u[k][i][j])
+	      //~ - eps4mj12*(u[k][i][j+2] - 3.0*u[k][i][j+1]
+			  //~ + 3.0*u[k][i][j] - u[k][i][j-1]);
+	  //~ }
+	//~ }
 	
-      } // Close Loop over J
-    } // Close Loop over I
+      //~ } // Close Loop over J
+    //~ } // Close Loop over I
+    
     
     // Calculate residuals
-    // First calculate wave-speeds and normalized pressure gradients
+    // First calculate wave-speeds and normalized pressure gradients (???)
+
+    for (int i=0; i < u[0].size(); i++){
+        int im = i - 1;
+        int ip = i + 1;
+        if (i == 0) {
+            // Periodic boundary (i-1 = i_max)
+            im = u[0].size() - 1;
+        } else if (i == u[0].size() - 1) {
+            // Periodic boundary (i-1 = i_max)
+            ip = 0;
+        }
+        
+        for (int j=0; j < u[0][0].size()-2; j++) {
+            int jm = j - 1;
+            int jp = j + 1;
+            if (j == 0) {
+                // Call airfoil ghost cell 
+                jm = u[0][0].size() - 2;
+            } else if (j == u[0][0].size() - 3) {
+                // Call external boundary ghost cell
+                jp = u[0][0].size() - 1;
+            }
+            
+            for (int var=0; var<u.size(); var++) {
+
+                // average fluxes at each wall between cells
+                // then dot with the wall normal
+                double Fmi12 = 0.5*(F[var][i][j] + F[var][im][j])*dsj_x[i][j];
+                double Fpi12 = 0.5*(F[var][i][j] + F[var][ip][j])*dsj_x[ip][j];
+                double Fmj12 = 0.5*(F[var][i][j] + F[var][i][jm])*dsi_x[i][j];
+                double Fpj12 = 0.5*(F[var][i][j] + F[var][i][jp])*dsi_x[i][j+1];
+                                                                 
+                double Gmi12 = 0.5*(G[var][i][j] + G[var][im][j])*dsj_y[i][j];
+                double Gpi12 = 0.5*(G[var][i][j] + G[var][ip][j])*dsj_y[ip][j];
+                double Gmj12 = 0.5*(G[var][i][j] + G[var][i][jm])*dsi_y[i][j];
+                double Gpj12 = 0.5*(G[var][i][j] + G[var][i][jp])*dsi_y[i][j+1];
+                
+                // Air foil boundary flux condition
+                if (i==0) {
+                    if (var == 0 || var == 3) {
+                        // the flux of rho and E normal to air foil = 0
+                        r[var][i][j]  = -1.*(Fmi12 + Gmi12) ; //+ dmi12[var][i][j]; 
+                        r[var][i][j] +=      Fpi12 + Gpi12  ; //- dpi12[var][i][j];
+                        r[var][i][j] += 0.;                 ; //
+                        r[var][i][j] +=      Fpj12 + Gpj12  ; //- dpj12[var][i][j];
+                    } else if (var == 1) {                  ; //
+                        // the flux of momentum = p         ; //
+                        r[var][i][j]  = -1.*(Fmi12 + Gmi12) ; //+ dmi12[var][i][j]; 
+                        r[var][i][j] +=      Fpi12 + Gpi12  ; //- dpi12[var][i][j];
+                        r[var][i][j] += -1.*p[i][j]*dsi_x[i][j]; //
+                        r[var][i][j] +=      Fpj12 + Gpj12  ; //- dpj12[var][i][j];
+                    } else if (var == 2){                   ; //
+                        // the flux of momentum = p         ; //
+                        r[var][i][j]  = -1.*(Fmi12 + Gmi12) ; //+ dmi12[var][i][j]; 
+                        r[var][i][j] +=      Fpi12 + Gpi12  ; //- dpi12[var][i][j];
+                        r[var][i][j] += -1.*p[i][j]*dsi_y[i][j];; //
+                        r[var][i][j] +=      Fpj12 + Gpj12  ; //- dpj12[var][i][j];
+                    }
+                } else {
+                    // Sum up fluxes normally 
+                    r[var][i][j]  = -1.*(Fmi12 + Gmi12) ; //+ dmi12[var][i][j]; 
+                    r[var][i][j] +=      Fpi12 + Gpi12  ; //- dpi12[var][i][j];
+                    r[var][i][j] += -1.*(Fmj12 + Gmj12) ; //+ dmj12[var][i][j];
+                    r[var][i][j] +=      Fpj12 + Gpj12  ; //- dpj12[var][i][j];
+                }
+            }
+        }
+    }
+    writeOutput(r);
 }
 
 void calcTau(const std::vector<std::vector<std::vector<double> > > &u, 
@@ -537,8 +638,8 @@ void calcTau(const std::vector<std::vector<std::vector<double> > > &u,
     // Average wall normals
     double dsi_x_avg = 0.5*(dsi_x[i][j] + dsi_x[i][j+1]);
     double dsi_y_avg = 0.5*(dsi_y[i][j] + dsi_y[i][j+1]);
-    double dsj_x_avg = 0.5*(dsi_x[i][j] + dsi_x[i+1][j]);
-    double dsj_y_avg = 0.5*(dsi_y[i][j] + dsi_y[i+1][j]);
+    double dsj_x_avg = 0.5*(dsj_x[i][j] + dsj_x[i+1][j]);
+    double dsj_y_avg = 0.5*(dsj_y[i][j] + dsj_y[i+1][j]);
     
     // Calculate max possible speed
     double uc = u_ij + c_ij;
@@ -559,11 +660,11 @@ void tempInt(const std::vector<std::vector<std::vector<double> > > &u,
 	    std::vector<std::vector<std::vector<double> > > &u_new)
 {
     // Computes RK step given variable vector u, residual from spacial 
-    // integrator r, a local time step (calculated here) and RK step weight alpha.
+    // integrator r, a local time step (calculated in calcTau) and RK step weight alpha.
     
     double tau_ij = 0.;
-    for (int i; i<u[0].size(); i++){
-        for (int j; j<u[0][0].size()-2; j++) {
+    for (int i=0; i<u[0].size(); i++){
+        for (int j=0; j<u[0][0].size()-2; j++) {
             // Calculate local time step
 	    calcTau(u, i, j, tau_ij, dsi_x, dsi_y, dsj_x, dsj_y);
             
@@ -670,6 +771,41 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
   }
 }
 
+// Perscribe values in airfoil ghost cells
+void setAirfoilBC ( std::vector<std::vector<std::vector<double> > > &u,
+                    const std::vector<std::vector<double> > &dsi_x,
+                    const std::vector<std::vector<double> > &dsi_y)
+{
+    // Copy interior cell values, but setting normal velocity to zero.
+    int b = u[0][0].size() - 2;  // boundary cell
+
+    for (int i=0; i<u[0].size(); i++) {
+        // Calculate unit normals
+        double s_mag = std::sqrt(dsi_x[i][0]*dsi_x[i][0] + dsi_y[i][0]*dsi_y[i][0]);
+        double nx = dsi_x[i][0] / s_mag;
+        double ny = dsi_y[i][0] / s_mag;
+        
+        // Find normal velocity
+        double u_norm = u[1][i][b-1] / u[0][i][b-1] * nx;
+        double v_norm = u[2][i][b-1] / u[0][i][b-1] * ny;
+        
+        // Find tangential velocity
+        double u_tan =  u[1][i][b-1] / u[0][i][b-1] * ny;
+        double v_tan = -u[2][i][b-1] / u[0][i][b-1] * nx;
+        
+        // Swap sign of normal
+        u_norm = -u_norm;
+        v_norm = -v_norm;
+        
+        // Assign ghost cell values
+        u[0][i][b] = u[0][i][b-1];  // same as interior
+        u[1][i][b] = u[0][i][b-1]*(u_norm + u_tan);  // same tan, opps normal
+        u[2][i][b] = u[0][i][b-1]*(v_norm + v_tan);  // same tan, ops normal
+        u[3][i][b] = u[3][i][b-1];  // same as interior
+    }
+}
+        
+        
 int main()
 {
     // Run parameters
@@ -712,6 +848,8 @@ int main()
     std::vector<double> colp (N_col+1); // For vectors with ghost cells (just u)
     grid_x.push_back(col);
     grid_y.push_back(col);
+    dsj_x.push_back(colm);
+    dsj_y.push_back(colm);
     
     for (int row = 0; row < N_row - 1; row++) {
         grid_x.push_back(col);
@@ -719,8 +857,8 @@ int main()
         x.push_back(colm);
         y.push_back(colm);
         omega.push_back(colm);
-        dsi_x.push_back(colm);
-        dsi_y.push_back(colm);
+        dsi_x.push_back(col);
+        dsi_y.push_back(col);
         dsj_x.push_back(colm);
         dsj_y.push_back(colm);
         u_temp.push_back(colp);
@@ -731,6 +869,12 @@ int main()
         u.push_back(u_temp);
     }
     
+    std::cout << "u[].size() = " << u[0].size() << " u[][].size = " << u[0][0].size() << std::endl; 
+    std::cout << "grid_x.size() = " << grid_x.size() << " grid_x[].size = " << grid_x[0].size() << std::endl;
+    std::cout << "x.size() = " << x.size() << " x[].size = " << x[0].size() << std::endl;
+    std::cout << "dsi_x.size() = " << dsi_x.size() << " dsi_x[].size = " << dsi_x[0].size() << std::endl; 
+    std::cout << "dsj_x.size() = " << dsj_x.size() << " dsj_x[].size = " << dsj_x[0].size() << std::endl; 
+
     // Prep work:
     //      Read in grid with cell verticies
     //      Find cell centers
@@ -742,10 +886,11 @@ int main()
     computeCellNormals(dsi_x, dsi_y, dsj_x, dsj_y, grid_x, grid_y);
     
     writeCellCentPoints(x, y);
+    writeCellNormals(dsi_x, dsi_y, dsj_x, dsj_y);
     
     // Set up initial conditions
     setIC(u, rho_0, u_0, v_0, E_0);
-    writeOutput(u);
+    //~ writeOutput(u);
     
     // Run sim (Using standard RK4 in time and Jameson artifical viscosty in space)
     double R = 1.0;
@@ -760,42 +905,45 @@ int main()
         // First RK step
         // Calculate residual
         spaceInt(u, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
+        //~ writeOutput(r);
         // Calculate first RK step
         double alpha = 0.25;
         tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_1);
         
-        // Second RK step
-        // Calculate residual using u_1
-        spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
-        // Calculate RK step
-        alpha = 1./3.;
-        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
+        //~ // Second RK step
+        //~ // Calculate residual using u_1
+        //~ spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
+        //~ // Calculate RK step
+        //~ alpha = 1./3.;
+        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
         
-        // Third RK step
-        // Calculate residual using u_2
-        spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
-        // Calculate RK step
-        alpha = 0.5;
-        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
+        //~ // Third RK step
+        //~ // Calculate residual using u_2
+        //~ spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
+        //~ // Calculate RK step
+        //~ alpha = 0.5;
+        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
         
-        // Fourth RK step
-        // Calculate residual using u_3
-        spaceInt(u_3, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
-        // Calculate RK step
-        alpha = 1.;
-        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);
+        //~ // Fourth RK step
+        //~ // Calculate residual using u_3
+        //~ spaceInt(u_3, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
+        //~ // Calculate RK step
+        //~ alpha = 1.;
+        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);
         
-        // Apply boundary conditions
-        //~ applyBC(u_4);
+        //~ // Apply boundary conditions
+        //~ setExteriorBC(u_4, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        //~ setAirfoilBC(u, dsi_x, dsi_y);
         
         // Update original vector u
-        
+        u = u_1;
+        //~ writeOutput(u_1);
         // Calculate total residual
-        
+        R = 1.0e-7;
         
     }
     
-    writeOutput(u);
+    //~ writeOutput(u);
     
     return 0;
 }

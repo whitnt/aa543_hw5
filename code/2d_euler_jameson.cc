@@ -204,13 +204,13 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             
             // Calculate fluxes
             F[0][i][j] = u_1;
-            F[1][i][j] = u_1*u_1/u_0 + p[i][j];
+            F[1][i][j] = u_1*u_1/u_0 + p;
             F[2][i][j] = u_1*u_2/u_0;
-            F[3][i][j] = u_1*(u_3 + p[i][j])/u_0;
+            F[3][i][j] = u_1*(u_3 + p)/u_0;
             G[0][i][j] = u_2;
             G[1][i][j] = u_1*u_2/u_0;
-            G[2][i][j] = u_2*u_2/u_0 + p[i][j];
-            G[3][i][j] = u_2*(u_3 + p[i][j])/u_0;
+            G[2][i][j] = u_2*u_2/u_0 + p;
+            G[3][i][j] = u_2*(u_3 + p)/u_0;
         }
     }
     
@@ -222,10 +222,6 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
     
     // Calculate residuals
     // First calculate wave-speeds and normalized pressure gradients
-    
-
-    
-    
 }
 
 void calcTau(const std::vector<std::vector<std::vector<double> > > &u, 

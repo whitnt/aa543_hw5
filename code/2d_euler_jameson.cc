@@ -235,7 +235,7 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
     
     // Calculate and store cell centered fluxes
     for (int i=0; i < u[0].size(); i++){
-        for (int j=0; j < u[0][0].size()-2; j++) {
+        for (int j=0; j < u[0][0].size(); j++) {
             // Create temp variables for readability
             double u_0 = u[0][i][j];
             double u_1 = u[1][i][j];
@@ -243,7 +243,7 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             double u_3 = u[3][i][j];
             double p_ij = 0.;
             
-            if (i >= u[0][0].size()-2) {
+            if (j >= u[0][0].size()-2 ) {
                 p_ij = (gamma - 1.)*(u_3 - 0.5*(u_1*u_1 + u_2*u_2)/u_0);
             } else {
                 p[i][j] = (gamma - 1.)*(u_3 - 0.5*(u_1*u_1 + u_2*u_2)/u_0);
@@ -587,7 +587,6 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             }
             
             for (int var=0; var<u.size(); var++) {
-
                 // average fluxes at each wall between cells
                 // then dot with the wall normal
                 double Fmi12 = 0.5*(F[var][i][j] + F[var][im][j])*dsj_x[i][j];
@@ -764,7 +763,7 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     // Compute u dot n (normal component of velocity)
     uin = uvel*nx + vvel*ny; // interior
     u0n = u_0*nx; // infty
-
+    
     // Compute u tangential
     //uit = uvel*ny - vvel*nx; // interior
     u0t = u_0*ny; // infty
@@ -778,6 +777,8 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     
     // Compute interior pressure
     pi = u[0][i][J_max - 3]*ci*ci/gamma;
+
+    std::cout << "pi = " << pi << std::endl;
     
     // Continue as inflow or outflow
     if (uin > 0) { // inflow BC
@@ -874,7 +875,7 @@ int main()
     double u_0      = 255.;
     double v_0      = 0.;
     double c_0      = 300.;
-    double E_0      = 193.;
+    //double E_0      = 193.;
     double p_0      = 26.5e3;
     
     std::cout << "p_0" << p_0 << std::endl;

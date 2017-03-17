@@ -117,8 +117,8 @@ void computeCellNormals(std::vector<std::vector<double> > &dsi_x,
     for (int i = 0; i < dsi_x.size(); i++) {
         for (int j = 0; j < dsi_x[0].size(); j++) {
         // Calculate them
-        dsi_x[i][j] = (grid_y[i+1][j] - grid_y[i][j]);
-        dsi_y[i][j] = -1.0*(grid_x[i+1][j] - grid_x[i][j]); // Modified w/ -1
+        dsi_x[i][j] = -1.0*(grid_y[i+1][j] - grid_y[i][j]);
+        dsi_y[i][j] = 1.*(grid_x[i+1][j] - grid_x[i][j]); // Modified w/ -1
         }
     }
     
@@ -160,7 +160,7 @@ void writeCellNormals(const std::vector<std::vector<double> > &dsi_x,
 
 void setIC(std::vector< std::vector< std::vector<double> > > &u,
             const double rho_0, const double u_0, const double v_0, 
-            const double E_0)
+            const double p_0, const double gamma)
 {
     // Set initial condition: u[i][j][var] = u @ infinity
     
@@ -171,7 +171,7 @@ void setIC(std::vector< std::vector< std::vector<double> > > &u,
             u[0][i][j] = rho_0;
             u[1][i][j] = rho_0*u_0;
             u[2][i][j] = rho_0*v_0;
-            u[3][i][j] = rho_0*E_0;
+            u[3][i][j] = 1./(gamma - 1.)*p_0/rho_0 + (u_0*u_0 + v_0*v_0)/2.;
             //~ std::cout << u[0][i][j] << u[1][i][j] << u[3][i][j] << std::endl;
         }
     }
@@ -188,6 +188,7 @@ void writeOutput(const std::vector<std::vector<std::vector<double> > > &u)
     std::ofstream rho_u ("output/rho_u.dat");
     std::ofstream rho_v ("output/rho_v.dat");
     std::ofstream rho_E ("output/rho_E.dat");
+    std::ofstream ghost ("output/ghost.dat");
     
     for (int i=0; i<I_max;i++) {
         for (int j=0; j<J_max-2;j++) {
@@ -195,7 +196,17 @@ void writeOutput(const std::vector<std::vector<std::vector<double> > > &u)
             rho_u   << u[1][i][j] << std::endl;
             rho_v   << u[2][i][j] << std::endl;
             rho_E   << u[3][i][j] << std::endl;
+
+                
         }
+    }
+                
+    for (int i=0; i<I_max;i++) { 
+        ghost << u[0][i][u[0][0].size() - 1] << "\t\t" 
+                << u[1][i][u[0][0].size() - 1] << "\t\t" 
+                << u[2][i][u[0][0].size() - 1] << "\t\t"
+                << u[3][i][u[0][0].size() - 1] << "\t\t"
+                << std::endl;
     }
 }
 
@@ -237,7 +248,7 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             
             // Calculate fluxes
             F[0][i][j] = u_1;
-            std::cout << F[0][i][j] << std::endl;
+            //~ std::cout << F[0][i][j] << std::endl;
             F[1][i][j] = u_1*u_1/u_0 + p[i][j];
             F[2][i][j] = u_1*u_2/u_0;
             F[3][i][j] = u_1*(u_3 + p[i][j])/u_0;
@@ -247,7 +258,7 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             G[3][i][j] = u_2*(u_3 + p[i][j])/u_0;
         }
     }
-    writeOutput(F);
+    //~ writeOutput(F);
     
     //~ double eps2pi12(omega);
     //~ double eps2mi12(omega);
@@ -544,7 +555,7 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
     
     // Calculate residuals
     // First calculate wave-speeds and normalized pressure gradients (???)
-
+    
     for (int i=0; i < u[0].size(); i++){
         int im = i - 1;
         int ip = i + 1;
@@ -572,30 +583,41 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
                 // average fluxes at each wall between cells
                 // then dot with the wall normal
                 double Fmi12 = 0.5*(F[var][i][j] + F[var][im][j])*dsj_x[i][j];
-                double Fpi12 = 0.5*(F[var][i][j] + F[var][ip][j])*dsj_x[ip][j];
+                double Fpi12 = 0.5*(F[var][i][j] + F[var][ip][j])*dsj_x[i+1][j];
                 double Fmj12 = 0.5*(F[var][i][j] + F[var][i][jm])*dsi_x[i][j];
                 double Fpj12 = 0.5*(F[var][i][j] + F[var][i][jp])*dsi_x[i][j+1];
                                                                  
                 double Gmi12 = 0.5*(G[var][i][j] + G[var][im][j])*dsj_y[i][j];
-                double Gpi12 = 0.5*(G[var][i][j] + G[var][ip][j])*dsj_y[ip][j];
+                double Gpi12 = 0.5*(G[var][i][j] + G[var][ip][j])*dsj_y[i+1][j];
                 double Gmj12 = 0.5*(G[var][i][j] + G[var][i][jm])*dsi_y[i][j];
                 double Gpj12 = 0.5*(G[var][i][j] + G[var][i][jp])*dsi_y[i][j+1];
                 
+                //~ if (i==0 && var==1){
+                    //~ std::cout << "j = " << j << std::endl;
+                    //~ std::cout << "Fmi12 = " << Fmi12 << std::endl;
+                    //~ std::cout << "Fpi12 = " << Fpi12 << std::endl;
+                    //~ std::cout << "Fmj12 = " << Fmj12 << std::endl;
+                    //~ std::cout << "Fpj12 = " << Fpj12 << std::endl;
+                    //~ std::cout << "Gmi12 = " << Gmi12 << std::endl;
+                    //~ std::cout << "Gpi12 = " << Gpi12 << std::endl;
+                    //~ std::cout << "Gmj12 = " << Gmj12 << std::endl;
+                    //~ std::cout << "Gpj12  = " << Gpj12 << std::endl;
+                //~ }
                 // Air foil boundary flux condition
-                if (i==0) {
+                if (j==0) {
                     if (var == 0 || var == 3) {
                         // the flux of rho and E normal to air foil = 0
                         r[var][i][j]  = -1.*(Fmi12 + Gmi12) ; //+ dmi12[var][i][j]; 
                         r[var][i][j] +=      Fpi12 + Gpi12  ; //- dpi12[var][i][j];
                         r[var][i][j] += 0.;                 ; //
                         r[var][i][j] +=      Fpj12 + Gpj12  ; //- dpj12[var][i][j];
-                    } else if (var == 1) {                  ; //
+                    } else if (var == 1) {                   //
                         // the flux of momentum = p         ; //
                         r[var][i][j]  = -1.*(Fmi12 + Gmi12) ; //+ dmi12[var][i][j]; 
                         r[var][i][j] +=      Fpi12 + Gpi12  ; //- dpi12[var][i][j];
                         r[var][i][j] += -1.*p[i][j]*dsi_x[i][j]; //
                         r[var][i][j] +=      Fpj12 + Gpj12  ; //- dpj12[var][i][j];
-                    } else if (var == 2){                   ; //
+                    } else if (var == 2){                    //
                         // the flux of momentum = p         ; //
                         r[var][i][j]  = -1.*(Fmi12 + Gmi12) ; //+ dmi12[var][i][j]; 
                         r[var][i][j] +=      Fpi12 + Gpi12  ; //- dpi12[var][i][j];
@@ -612,29 +634,29 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             }
         }
     }
-    writeOutput(r);
+    //~ writeOutput(r);
 }
 
 void calcTau(const std::vector<std::vector<std::vector<double> > > &u, 
-	     const int i, const int j, double tau_ij,
+	     const int i, const int j, double &tau_ij,
 	     std::vector<std::vector<double> > &dsi_x,
 	     std::vector<std::vector<double> > &dsi_y,
-             std::vector<std::vector<double> > &dsj_x,
-             std::vector<std::vector<double> > &dsj_y)
+         std::vector<std::vector<double> > &dsj_x,
+         std::vector<std::vector<double> > &dsj_y)
 {
     // Calculate local time step
     // Given parameters
-    double cfl = 2.8;
+    double cfl = 2.5;
     double gamma = 1.4;
     
     // Find local u, v and c
     double rho_ij = u[0][i][j];
     double u_ij = u[1][i][j]/rho_ij;
     double v_ij = u[2][i][j]/rho_ij;
-    double p_ij = (gamma - 1)*(0.5*rho_ij*std::sqrt(u_ij*u_ij + v_ij*v_ij) 
-                            - u[3][i][j]);
+    double p_ij = (gamma - 1)*(u[3][i][j] - 0.5*rho_ij*(u_ij*u_ij + v_ij*v_ij));
     double c_ij = std::sqrt(gamma*p_ij/rho_ij);
     
+    //~ std::cout << "P_ij = " << p_ij << std::endl;
     // Average wall normals
     double dsi_x_avg = 0.5*(dsi_x[i][j] + dsi_x[i][j+1]);
     double dsi_y_avg = 0.5*(dsi_y[i][j] + dsi_y[i][j+1]);
@@ -648,6 +670,7 @@ void calcTau(const std::vector<std::vector<std::vector<double> > > &u,
     // Calculate time step
     tau_ij = cfl/(std::abs(dsi_x_avg*uc + dsi_y_avg*vc) 
                                 + std::abs(dsj_x_avg*uc + dsj_y_avg*vc));
+    
 }
 
 void tempInt(const std::vector<std::vector<std::vector<double> > > &u,
@@ -673,6 +696,7 @@ void tempInt(const std::vector<std::vector<std::vector<double> > > &u,
             u_new[1][i][j] = u[1][i][j] - alpha*tau_ij*r[1][i][j];
             u_new[2][i][j] = u[2][i][j] - alpha*tau_ij*r[2][i][j];
             u_new[3][i][j] = u[3][i][j] - alpha*tau_ij*r[3][i][j];
+            //~ std::cout << tau_ij << std::endl;
         }
     }
 }
@@ -709,18 +733,29 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
   double rhob = 0.; // density boundary
   double pb = 0.; // pressure boundary
   double pi = 0.; // pressure interior
+  int I_max = u[0].size();
   int J_max = u[0][0].size();
   
-  for (int i = 0; i < N_col; i++) {
+  for (int i = 0; i < I_max; i++) {
     // Normalize "j" unit vectors
-    norm = sqrt(dsi_x[i][J_max - 2]*dsi_x[i][J_max - 2]
-		+ dsi_y[i][J_max - 2]*dsi_y[i][J_max - 2]);
-    nx = -1.0*dsi_x[i][J_max - 2]/norm; // Reverse for convention 
-    ny = -1.0*dsi_y[i][J_max - 2]/norm; // Reverse for convention
+    norm = sqrt(dsi_x[i][J_max - 3]*dsi_x[i][J_max - 3]
+		+ dsi_y[i][J_max - 3]*dsi_y[i][J_max - 3]);
+        
+    std::cout << "i = " << i << std::endl;
+    std::cout << "norm = " << norm << std::endl;
+    std::cout << "dsi_x =  " << dsi_x[i][J_max - 3] << std::endl;
+    std::cout << "nx = " << nx << std::endl;
+    std::cout << "ny = " << ny << std::endl;
+    
+    nx = -1.0*dsi_x[i][J_max - 3]/norm; // Reverse for convention
+    ny = -1.0*dsi_y[i][J_max - 3]/norm; // Reverse for convention
+    
+    std::cout << "nx = " << nx << std::endl;
+    std::cout << "ny = " << ny << std::endl;
     
     // Check for inflow or outflow
-    uvel = u[1][i][J_max - 2]/u[0][i][J_max - 2];
-    vvel = u[2][i][J_max - 2]/u[0][i][J_max - 2];
+    uvel = u[1][i][J_max - 3]/u[0][i][J_max - 3];
+    vvel = u[2][i][J_max - 3]/u[0][i][J_max - 3];
     
     // Compute u dot n (normal component of velocity)
     uin = uvel*nx + vvel*ny; // interior
@@ -731,11 +766,11 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     u0t = u_0*ny; // infty
     
     // Compute interior speed of sound
-    ci = sqrt((gamma - 1)*(u[3][i][J_max - 2]/u[0][i][J_max - 2]
+    ci = sqrt(gamma*(gamma - 1)*(u[3][i][J_max - 3]/u[0][i][J_max - 3]
 			   - 0.5*(uvel*uvel + vvel*vvel)));
     
     // Compute interior pressure
-    pi = u[0][i][J_max - 2]*ci;
+    pi = u[0][i][J_max - 3]*ci*ci/gamma;
     
     // Continue as inflow or outflow
     if (uin > 0) { // inflow BC
@@ -756,7 +791,13 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     unb = 0.5*(R_inf + R_int);
     cb = 0.25*(gamma - 1.0)*(R_inf - R_int);
     rhob = pow(cb*cb*pow(rho_0, gamma)/(gamma*p_0), 1./(gamma - 1.0));
-    pb = rhob*cb*cb;
+    pb = rhob*cb*cb/gamma;
+    
+    std::cout << "c_b = " << cb << std::endl;
+    std::cout << "u0t = " << u0t << std::endl;
+    std::cout << "unb = " << unb << std::endl;
+    std::cout << "nx = " << nx << std::endl;
+    std::cout << "ny = " << ny << std::endl;
     
     // Compute Conserved Boundary Values
     // density
@@ -809,7 +850,7 @@ void setAirfoilBC ( std::vector<std::vector<std::vector<double> > > &u,
 int main()
 {
     // Run parameters
-    double cfl      = 2.8;
+    double cfl      = 2.5;
     double R_min    = 1.0e-6; // Target residual value
     double vars     = 4; // Number of conserved variables
     
@@ -820,7 +861,9 @@ int main()
     double v_0      = 0.;
     double c_0      = 300.;
     double E_0      = 193.;
-    double p_0      = rho_0*(gamma - 1.0)*(E_0 - 0.5*u_0*u_0);
+    double p_0      = 26.5e3;
+    
+    std::cout << "p_0" << p_0 << std::endl;
     
     ////// Allocate all global vectors that will be used throughout sim
     int N_row = 129;
@@ -889,12 +932,13 @@ int main()
     writeCellNormals(dsi_x, dsi_y, dsj_x, dsj_y);
     
     // Set up initial conditions
-    setIC(u, rho_0, u_0, v_0, E_0);
+    setIC(u, rho_0, u_0, v_0, p_0, gamma);
     //~ writeOutput(u);
     
     // Run sim (Using standard RK4 in time and Jameson artifical viscosty in space)
     double R = 1.0;
-    while (R > 1.0e-6) {
+    //~ while (R > 1.0e-6) {
+    for (int i=0; i<1; i++) {
         // Create copies of u for RK steps, plus an r to store residuals;
         std::vector< std::vector< std::vector<double> > > u_1(u);
         std::vector< std::vector< std::vector<double> > > u_2(u);
@@ -904,33 +948,46 @@ int main()
         
         // First RK step
         // Calculate residual
-        spaceInt(u, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
+        spaceInt(u, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
         //~ writeOutput(r);
         // Calculate first RK step
         double alpha = 0.25;
         tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_1);
         
-        //~ // Second RK step
-        //~ // Calculate residual using u_1
-        //~ spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
-        //~ // Calculate RK step
-        //~ alpha = 1./3.;
-        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
+        setExteriorBC(u_1, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         
-        //~ // Third RK step
-        //~ // Calculate residual using u_2
-        //~ spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
-        //~ // Calculate RK step
-        //~ alpha = 0.5;
-        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
         
-        //~ // Fourth RK step
-        //~ // Calculate residual using u_3
-        //~ spaceInt(u_3, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
-        //~ // Calculate RK step
-        //~ alpha = 1.;
-        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);
+        // Second RK step
+        // Calculate residual using u_1
+        spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
+        // Calculate RK step
+        alpha = 1./3.;
         
+        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
+        
+        setExteriorBC(u_2, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+       
+
+        // Third RK step
+        // Calculate residual using u_2
+        spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
+        // Calculate RK step
+        alpha = 0.5;
+        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
+        
+        setExteriorBC(u_3, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        
+        // Fourth RK step
+        // Calculate residual using u_3
+        spaceInt(u_3, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
+        // Calculate RK step
+        alpha = 1.;
+        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);
+        
+        setExteriorBC(u_4, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        
+        writeOutput(u_4);
+
         //~ // Apply boundary conditions
         //~ setExteriorBC(u_4, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         //~ setAirfoilBC(u, dsi_x, dsi_y);

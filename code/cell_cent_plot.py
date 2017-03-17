@@ -2,7 +2,7 @@
 AA543 - CFD, HW#5, Winter 2017
 
 Plots grids
-Right now, plots grid verticies and connects as grid
+Right now, plots cell centers and connects as grid
 """
 
 from matplotlib import pyplot as plt
@@ -10,38 +10,36 @@ import numpy as np
 
 
 # Import airfoil profile
-I_max  = 129
-J_max = 65
+I_max  = 128
+J_max = 64
 num = []
 x = np.zeros((I_max, J_max)) 
 y = np.zeros((I_max, J_max)) 
 
 i = 0
 j = 0
-for line in open('output/grid_x.dat', 'r'):
-    if i < 128 :
+for line in open('output/cell_x.dat', 'r'):
+    if j < 63 :
         x[i,j] = float(line)
-        i = i + 1
+        j = j + 1
     else:
         x[i,j] = float(line)
         #~ print(x[0,j], ", ", x[-1,j])
-        i = 0
-        j = j + 1
+        j = 0
+        i = i + 1
 
 i = 0
 j = 0
 
-for line in open('output/grid_y.dat', 'r'):
-    if i < 128:
+for line in open('output/cell_y.dat', 'r'):
+    if j < 63:
         y[i,j] = float(line)
-        i = i + 1
+        j = j + 1
     else:
         y[i,j] = float(line)
         #~ print(y[0,j], ", ", y[-1,j])
-        i = 0
-        j = j + 1
-
-
+        j = 0
+        i = i + 1
 
 
 # Plot explicit vs analytic for time step specified

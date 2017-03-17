@@ -188,7 +188,8 @@ void writeOutput(const std::vector<std::vector<std::vector<double> > > &u)
     std::ofstream rho_u ("output/rho_u.dat");
     std::ofstream rho_v ("output/rho_v.dat");
     std::ofstream rho_E ("output/rho_E.dat");
-    std::ofstream ghost ("output/ghost.dat");
+    std::ofstream ghost_ext ("output/ghost_ext.dat");
+    std::ofstream ghost_int ("output/ghost_air.dat");
     
     for (int i=0; i<I_max;i++) {
         for (int j=0; j<J_max-2;j++) {
@@ -201,10 +202,18 @@ void writeOutput(const std::vector<std::vector<std::vector<double> > > &u)
     }
                 
     for (int i=0; i<I_max;i++) { 
-        ghost << u[0][i][u[0][0].size() - 1] << "\t\t" 
+        ghost_ext << u[0][i][u[0][0].size() - 1] << "\t\t" 
                 << u[1][i][u[0][0].size() - 1] << "\t\t" 
                 << u[2][i][u[0][0].size() - 1] << "\t\t"
                 << u[3][i][u[0][0].size() - 1] << "\t\t"
+                << std::endl;
+    }
+    
+    for (int i=0; i<I_max;i++) { 
+        ghost_int << u[0][i][u[0][0].size() - 2] << "\t\t" 
+                << u[1][i][u[0][0].size() - 2] << "\t\t" 
+                << u[2][i][u[0][0].size() - 2] << "\t\t"
+                << u[3][i][u[0][0].size() - 2] << "\t\t"
                 << std::endl;
     }
 }
@@ -235,7 +244,7 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
     
     // Calculate and store cell centered fluxes
     for (int i=0; i < u[0].size(); i++){
-        for (int j=0; j < u[0][0].size()-2; j++) {
+        for (int j=0; j < u[0][0].size(); j++) {
             // Create temp variables for readability
             double u_0 = u[0][i][j];
             double u_1 = u[1][i][j];
@@ -243,7 +252,7 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             double u_3 = u[3][i][j];
             double p_ij = 0.;
             
-            if (i >= u[0][0].size()-2) {
+            if (j >= u[0][0].size()-2) {
                 p_ij = (gamma - 1.)*(u_3 - 0.5*(u_1*u_1 + u_2*u_2)/u_0);
             } else {
                 p[i][j] = (gamma - 1.)*(u_3 - 0.5*(u_1*u_1 + u_2*u_2)/u_0);
@@ -952,7 +961,7 @@ int main()
     // Run sim (Using standard RK4 in time and Jameson artifical viscosty in space)
     double R = 1.0;
     //~ while (R > 1.0e-6) {
-    for (int i=0; i<1; i++) {
+    for (int i=0; i<2; i++) {
         // Create copies of u for RK steps, plus an r to store residuals;
         std::vector< std::vector< std::vector<double> > > u_1(u);
         std::vector< std::vector< std::vector<double> > > u_2(u);
@@ -960,7 +969,9 @@ int main()
         std::vector< std::vector< std::vector<double> > > u_4(u);
         std::vector< std::vector< std::vector<double> > > r(u);
         
-        //~ setExteriorBC(u, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        setExteriorBC(u, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        setAirfoilBC(u, dsi_x, dsi_y);
+        
         
         // First RK step
         // Calculate residual
@@ -970,47 +981,47 @@ int main()
         double alpha = 0.25;
         tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_1);
         
+        setAirfoilBC(u_1, dsi_x, dsi_y);
         setExteriorBC(u_1, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         
+        //~ writeOutput(u_1);
         
-        //~ // Second RK step
-        //~ // Calculate residual using u_1
-        //~ spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
-        //~ // Calculate RK step
-        //~ alpha = 1./3.;
+        // Second RK step
+        // Calculate residual using u_1
+        spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
+        // Calculate RK step
+        alpha = 1./3.;
         
-        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
+        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
         
-        //~ setExteriorBC(u_2, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
-       
+        setExteriorBC(u_2, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        setAirfoilBC(u_2, dsi_x, dsi_y);
 
-        //~ // Third RK step
-        //~ // Calculate residual using u_2
-        //~ spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
-        //~ // Calculate RK step
-        //~ alpha = 0.5;
-        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
+        // Third RK step
+        // Calculate residual using u_2
+        spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
+        // Calculate RK step
+        alpha = 0.5;
+        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
         
-        //~ setExteriorBC(u_3, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        setExteriorBC(u_3, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        setAirfoilBC(u_3, dsi_x, dsi_y);
         
-        //~ // Fourth RK step
-        //~ // Calculate residual using u_3
-        //~ spaceInt(u_3, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
-        //~ // Calculate RK step
-        //~ alpha = 1.;
-        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);
+        // Fourth RK step
+        // Calculate residual using u_3
+        spaceInt(u_3, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
+        // Calculate RK step
+        alpha = 1.;
+        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);
         
-        //~ setExteriorBC(u_4, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
-        
-        writeOutput(u_1);
+        setExteriorBC(u_4, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        setAirfoilBC(u_4, dsi_x, dsi_y);
 
-        //~ // Apply boundary conditions
-        //~ setExteriorBC(u_4, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
-        //~ setAirfoilBC(u, dsi_x, dsi_y);
         
         // Update original vector u
         u = u_4;
-        //~ writeOutput(u_1);
+        writeOutput(u_4);
+        
         // Calculate total residual
         R = 1.0e-7;
         

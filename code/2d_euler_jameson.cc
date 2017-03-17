@@ -566,7 +566,7 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
 	  //~ }
 	//~ }
 	
-      //~ } // Close Loop over J
+    //~ } // Close Loop over J
     //~ } // Close Loop over I
     
     
@@ -662,7 +662,7 @@ void calcTau(const std::vector<std::vector<std::vector<double> > > &u,
 {
     // Calculate local time step
     // Given parameters
-    double cfl = 2.5;
+    double cfl = 0.5;
     double gamma = 1.4;
     
     // Find local u, v and c
@@ -760,14 +760,9 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     nx = -1.0*dsi_x[i][J_max - 3]/norm; // Reverse for convention
     ny = -1.0*dsi_y[i][J_max - 3]/norm; // Reverse for convention
     
-    std::cout << "nx = " << nx << std::endl;
-    std::cout << "ny = " << ny << std::endl;
-    
     // Check for inflow or outflow
     uvel = u[1][i][J_max - 3]/u[0][i][J_max - 3];
     vvel = u[2][i][J_max - 3]/u[0][i][J_max - 3];
-
-    std::cout << "uvel = " << uvel << std::endl;
     
     // Compute u dot n (normal component of velocity)
     uin = uvel*nx + vvel*ny; // interior
@@ -775,20 +770,19 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     
     // Compute u tangential
     //uit = uvel*ny - vvel*nx; // interior
-    u0t = -u_0*ny; // infty
-    //u0t = 0;
+    u0t = u_0*ny; // infty
     
     // Compute interior speed of sound
     ci = sqrt(gamma*(gamma - 1)*(
 	      u[3][i][J_max - 3]/u[0][i][J_max - 3]
 	      - 0.5*(uvel*uvel + vvel*vvel)));
     
-    std::cout << "ci = " << ci << std::endl;
-    
     // Compute interior pressure
     pi = u[0][i][J_max - 3]*ci*ci/gamma;
 
-    std::cout << "pi = " << pi << std::endl;
+    if (i == 120) {
+      std::cout << "uin = " << uin << std::endl;
+    }
     
     // Continue as inflow or outflow
     if (uin > 0) { // inflow BC
@@ -803,26 +797,33 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
       rhob = pow(cb*cb*pow(rho_0, gamma)/(gamma*p_0), 1./(gamma - 1.0));
       pb = rhob*cb*cb/gamma;
       
-      // Outflow
-      std::cout << "Inflow:" << std::endl;
-      std::cout << "c_b = " << cb << std::endl;
-      std::cout << "u0n = " << u0n << std::endl;
-      std::cout << "u0t = " << u0t << std::endl;
-      std::cout << "unb = " << unb << std::endl;
-      std::cout << "nx = " << nx << std::endl;
-      std::cout << "ny = " << ny << std::endl;
-      
-      // Compute Conserved Boundary Values
-      // density
-      u[0][i][J_max - 1] = rhob;
-      // x velocity
-      u[1][i][J_max - 1] = rhob*(unb*nx + u0t*ny);
-      // y velocity
-      u[2][i][J_max - 1] = rhob*(unb*ny - u0t*nx);
-      //u[2][i][J_max - 1] = 0;
-      // Energy
-      u[3][i][J_max - 1] = rhob*((1./(gamma - 1.0))*(pb/rhob)
+      // Inflow
+      if (i < 64 && i > 32) {
+	
+	// Compute Conserved Boundary Values
+	// density
+	u[0][i][J_max - 1] = rhob;
+	// x velocity
+	u[1][i][J_max - 1] = rhob*(unb*nx + u0t*ny);
+	// y velocity
+	u[2][i][J_max - 1] = rhob*(unb*ny - u0t*nx);
+	// Energy
+	u[3][i][J_max - 1] = rhob*((1./(gamma - 1.0))*(pb/rhob)
 			        + 0.5*(unb*unb + u0t*u0t));
+      }
+      if (i >= 64) {
+	
+	// Compute Conserved Boundary Values
+	// density
+	u[0][i][J_max - 1] = rhob;
+	// x velocity
+	u[1][i][J_max - 1] = rhob*(unb*nx + u0t*ny);
+	// y velocity
+	u[2][i][J_max - 1] = rhob*(unb*ny - u0t*nx);
+	// Energy
+	u[3][i][J_max - 1] = rhob*((1./(gamma - 1.0))*(pb/rhob)
+				   + 0.5*(unb*unb + u0t*u0t));
+      } 
     }
     
     if (uin < 0) { // outflow BC
@@ -838,25 +839,34 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
       pb = rhob*cb*cb/gamma;
       
       // Outflow
-      std::cout << "Outflow:" << std::endl;
-      std::cout << "c_b = " << cb << std::endl;
-      std::cout << "u0n = " << u0n << std::endl;
-      std::cout << "u0t = " << u0t << std::endl;
-      std::cout << "unb = " << unb << std::endl;
-      std::cout << "nx = " << nx << std::endl;
-      std::cout << "ny = " << ny << std::endl;
-      
-      // Compute Conserved Boundary Values
-      // density
-      u[0][i][J_max - 1] = rhob;
-      // x velocity
-      u[1][i][J_max - 1] = rhob*(unb*nx + u0t*ny);
-      // y velocity
-      u[2][i][J_max - 1] = rhob*(unb*ny - u0t*nx);
-      //u[2][i][J_max - 1] = 0;
-      // Energy
-      u[3][i][J_max - 1] = rhob*((1./(gamma - 1.0))*(pb/rhob)
-			        + 0.5*(unb*unb + u0t*u0t));
+      if (i <= 32) {
+	
+	// Compute Conserved Boundary Values
+	// density
+	u[0][i][J_max - 1] = rhob;
+	// x velocity
+	u[1][i][J_max - 1] = rhob*(unb*nx + u0t*ny);
+	// y velocity
+	u[2][i][J_max - 1] = rhob*(unb*ny - u0t*nx);
+	//u[2][i][J_max - 1] = 0;
+	// Energy
+	u[3][i][J_max - 1] = rhob*((1./(gamma - 1.0))*(pb/rhob)
+				   + 0.5*(unb*unb + u0t*u0t));
+      }
+      if (i > 96) {
+	
+	// Compute Conserved Boundary Values
+	// density
+	u[0][i][J_max - 1] = rhob;
+	// x velocity
+	u[1][i][J_max - 1] = rhob*(unb*nx + u0t*ny);
+	// y velocity
+	u[2][i][J_max - 1] = rhob*(unb*ny - u0t*nx);
+	//u[2][i][J_max - 1] = 0;
+	// Energy
+	u[3][i][J_max - 1] = rhob*((1./(gamma - 1.0))*(pb/rhob)
+				   + 0.5*(unb*unb + u0t*u0t));
+      }
     }
   }
 }
@@ -894,12 +904,12 @@ void setAirfoilBC ( std::vector<std::vector<std::vector<double> > > &u,
         u[3][i][b] = u[3][i][b-1];  // same as interior
     }
 }
-        
-        
+
+
 int main()
 {
     // Run parameters
-    double cfl      = 2.5;
+    double cfl      = 0.5;
     double R_min    = 1.0e-6; // Target residual value
     double vars     = 4; // Number of conserved variables
     
@@ -989,7 +999,7 @@ int main()
     double R_avg = 1.0;
     
     //~ while (R_max > 1.0e-6) {
-    for (int i=0; i<5; i++) {
+    for (int i=0; i<500; i++) {
         // Create copies of u for RK steps, plus an r to store residuals;
         std::vector< std::vector< std::vector<double> > > u_1(u);
         std::vector< std::vector< std::vector<double> > > u_2(u);

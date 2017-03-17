@@ -775,7 +775,8 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     
     // Compute u tangential
     //uit = uvel*ny - vvel*nx; // interior
-    u0t = u_0*ny; // infty
+    u0t = -u_0*ny; // infty
+    //u0t = 0;
     
     // Compute interior speed of sound
     ci = sqrt(gamma*(gamma - 1)*(
@@ -801,6 +802,27 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
       cb = 0.25*(gamma - 1.0)*(R_inf - R_int);
       rhob = pow(cb*cb*pow(rho_0, gamma)/(gamma*p_0), 1./(gamma - 1.0));
       pb = rhob*cb*cb/gamma;
+      
+      // Outflow
+      std::cout << "Inflow:" << std::endl;
+      std::cout << "c_b = " << cb << std::endl;
+      std::cout << "u0n = " << u0n << std::endl;
+      std::cout << "u0t = " << u0t << std::endl;
+      std::cout << "unb = " << unb << std::endl;
+      std::cout << "nx = " << nx << std::endl;
+      std::cout << "ny = " << ny << std::endl;
+      
+      // Compute Conserved Boundary Values
+      // density
+      u[0][i][J_max - 1] = rhob;
+      // x velocity
+      u[1][i][J_max - 1] = rhob*(unb*nx + u0t*ny);
+      // y velocity
+      u[2][i][J_max - 1] = rhob*(unb*ny - u0t*nx);
+      //u[2][i][J_max - 1] = 0;
+      // Energy
+      u[3][i][J_max - 1] = rhob*((1./(gamma - 1.0))*(pb/rhob)
+			        + 0.5*(unb*unb + u0t*u0t));
     }
     
     if (uin < 0) { // outflow BC
@@ -810,29 +832,32 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
       R_int = -1.0*abs(uin) + 2.0/(gamma - 1.0)*ci;
       
       // Compute Primitive Boundary Values
-      unb = -0.5*(R_inf + R_int);
-      cb = -0.25*(gamma - 1.0)*(R_inf - R_int);
+      unb = 0.5*(R_inf + R_int);
+      cb = 0.25*(gamma - 1.0)*(R_inf - R_int);
       rhob = pow(cb*cb*pow(rho_0, gamma)/(gamma*p_0), 1./(gamma - 1.0));
       pb = rhob*cb*cb/gamma;
-    }
-    
-        
-    std::cout << "c_b = " << cb << std::endl;
-    std::cout << "u0t = " << u0t << std::endl;
-    std::cout << "unb = " << unb << std::endl;
-    std::cout << "nx = " << nx << std::endl;
-    std::cout << "ny = " << ny << std::endl;
-    
-    // Compute Conserved Boundary Values
-    // density
-    u[0][i][J_max - 1] = rhob;
-    // x velocity
-    u[1][i][J_max - 1] = rhob*(unb*nx - u0t*nx);
-    // y velocity
-    u[2][i][J_max - 1] = rhob*(unb*ny + u0t*ny);
-    // Energy
-    u[3][i][J_max - 1] = rhob*((1./(gamma - 1.0))*(pb/rhob)
+      
+      // Outflow
+      std::cout << "Outflow:" << std::endl;
+      std::cout << "c_b = " << cb << std::endl;
+      std::cout << "u0n = " << u0n << std::endl;
+      std::cout << "u0t = " << u0t << std::endl;
+      std::cout << "unb = " << unb << std::endl;
+      std::cout << "nx = " << nx << std::endl;
+      std::cout << "ny = " << ny << std::endl;
+      
+      // Compute Conserved Boundary Values
+      // density
+      u[0][i][J_max - 1] = rhob;
+      // x velocity
+      u[1][i][J_max - 1] = rhob*(unb*nx + u0t*ny);
+      // y velocity
+      u[2][i][J_max - 1] = rhob*(unb*ny - u0t*nx);
+      //u[2][i][J_max - 1] = 0;
+      // Energy
+      u[3][i][J_max - 1] = rhob*((1./(gamma - 1.0))*(pb/rhob)
 			        + 0.5*(unb*unb + u0t*u0t));
+    }
   }
 }
 
@@ -972,7 +997,8 @@ int main()
         
         setExteriorBC(u, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         setAirfoilBC(u, dsi_x, dsi_y);
-        
+	
+	writeOutput(u);
         
         // First RK step
         // Calculate residual
@@ -985,11 +1011,11 @@ int main()
         setAirfoilBC(u_1, dsi_x, dsi_y);
         setExteriorBC(u_1, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         
-        //~ writeOutput(u_1);
+        writeOutput(u_1);
         
         // Second RK step
         // Calculate residual using u_1
-        spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
+        //spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
         // Calculate RK step
         alpha = 1./3.;
         
@@ -997,7 +1023,7 @@ int main()
         
         setExteriorBC(u_2, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         setAirfoilBC(u_2, dsi_x, dsi_y);
-
+	
         // Third RK step
         // Calculate residual using u_2
         spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);

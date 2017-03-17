@@ -14,13 +14,16 @@ from matplotlib import cm
 x = np.loadtxt('output/cell_x.dat')
 y = np.loadtxt('output/cell_y.dat')
 
-
-
 # Read variable files
 rho     = np.loadtxt('output/rho.dat')
 rho_u   = np.loadtxt('output/rho_u.dat')
 rho_v   = np.loadtxt('output/rho_v.dat')
 rho_E   = np.loadtxt('output/rho_E.dat')
+
+# Calculate plot variables
+u       = rho_u / rho 
+v       = rho_v / rho
+u_mag   = np.sqrt(u*u + v*v)
 
 print(len(rho), len(x), len(y))
 

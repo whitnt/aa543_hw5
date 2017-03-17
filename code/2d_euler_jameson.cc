@@ -608,17 +608,17 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
                 double Gmj12 = 0.5*(G[var][i][j] + G[var][i][jm])*dsi_y[i][j];
                 double Gpj12 = 0.5*(G[var][i][j] + G[var][i][jp])*dsi_y[i][j+1];
                 
-                if (j==u[0][0].size()-3 && var==1){
-                    std::cout << "i = " << i << std::endl;
-                    std::cout << "Fmi12 = " << Fmi12 << std::endl;
-                    std::cout << "Fpi12 = " << Fpi12 << std::endl;
-                    std::cout << "Fmj12 = " << Fmj12 << std::endl;
-                    std::cout << "Fpj12 = " << Fpj12 << std::endl;
-                    std::cout << "Gmi12 = " << Gmi12 << std::endl;
-                    std::cout << "Gpi12 = " << Gpi12 << std::endl;
-                    std::cout << "Gmj12 = " << Gmj12 << std::endl;
-                    std::cout << "Gpj12  = " << Gpj12 << std::endl;
-                }
+                //~ if (j==u[0][0].size()-3 && var==1){
+                    //~ std::cout << "i = " << i << std::endl;
+                    //~ std::cout << "Fmi12 = " << Fmi12 << std::endl;
+                    //~ std::cout << "Fpi12 = " << Fpi12 << std::endl;
+                    //~ std::cout << "Fmj12 = " << Fmj12 << std::endl;
+                    //~ std::cout << "Fpj12 = " << Fpj12 << std::endl;
+                    //~ std::cout << "Gmi12 = " << Gmi12 << std::endl;
+                    //~ std::cout << "Gpi12 = " << Gpi12 << std::endl;
+                    //~ std::cout << "Gmj12 = " << Gmj12 << std::endl;
+                    //~ std::cout << "Gpj12  = " << Gpj12 << std::endl;
+                //~ }
                 // Air foil boundary flux condition
                 if (j==0) {
                     if (var == 0 || var == 3) {
@@ -960,9 +960,11 @@ int main()
     //~ writeOutput(u);
     
     // Run sim (Using standard RK4 in time and Jameson artifical viscosty in space)
-    double R = 1.0;
-    //~ while (R > 1.0e-6) {
-    for (int i=0; i<2; i++) {
+    double R_max = 1.0;
+    double R_avg = 1.0;
+    
+    //~ while (R_max > 1.0e-6) {
+    for (int i=0; i<10; i++) {
         // Create copies of u for RK steps, plus an r to store residuals;
         std::vector< std::vector< std::vector<double> > > u_1(u);
         std::vector< std::vector< std::vector<double> > > u_2(u);
@@ -1017,18 +1019,33 @@ int main()
         
         setExteriorBC(u_4, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         setAirfoilBC(u_4, dsi_x, dsi_y);
-
+        
         
         // Update original vector u
         u = u_4;
-        writeOutput(u_4);
         
         // Calculate total residual
-        R = 1.0e-7;
-        
+        R_max = 0.0;
+        R_avg = 0.0;
+        for (int i=0; i<r[0].size(); i++) {
+            for (int j=0; j<r[0][0].size()-2; j++) {
+                double r_max = 0.0;
+                if (r[0][i][j] > r[1][i][j] || r[2][i][j] > r[3][i][j]) {
+                    r_max = std::max(r[0][i][j], r[2][i][j]);
+                } else {
+                    r_max = std::max(r[1][i][j], r[3][i][j]);
+                }
+                if (r_max > R_max) {
+                    R_max = r_max;
+                }
+                R_avg = R_avg + R_max;
+            }
+        }
+        R_avg = R_avg / (r[0].size() * r[0][0].size());
+        std::cout << "R_max = " << R_max << " R_avg = " << R_avg << std::endl;
     }
     
-    //~ writeOutput(u);
+    writeOutput(u);
     
     return 0;
 }

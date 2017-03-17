@@ -989,7 +989,7 @@ int main()
     double R_avg = 1.0;
     
     //~ while (R_max > 1.0e-6) {
-    for (int i=0; i<10; i++) {
+    for (int i=0; i<5; i++) {
         // Create copies of u for RK steps, plus an r to store residuals;
         std::vector< std::vector< std::vector<double> > > u_1(u);
         std::vector< std::vector< std::vector<double> > > u_2(u);

@@ -242,22 +242,31 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
             double u_1 = u[1][i][j];
             double u_2 = u[2][i][j];
             double u_3 = u[3][i][j];
+            double p_ij = 0.;
             
-            p[i][j] = (gamma - 1.)*(u_3 - 0.5*(u_1*u_1 + u_2*u_2)/u_0);
-            sound[i][j] = sqrt(p[i][j]/u_0);
+            if (i >= u[0][0].size()-2) {
+                p_ij = (gamma - 1.)*(u_3 - 0.5*(u_1*u_1 + u_2*u_2)/u_0);
+            } else {
+                p[i][j] = (gamma - 1.)*(u_3 - 0.5*(u_1*u_1 + u_2*u_2)/u_0);
+                sound[i][j] = sqrt(gamma*p[i][j]/u_0);
+                p_ij = p[i][j];
+            }
             
             // Calculate fluxes
             F[0][i][j] = u_1;
             //~ std::cout << F[0][i][j] << std::endl;
-            F[1][i][j] = u_1*u_1/u_0 + p[i][j];
+            F[1][i][j] = u_1*u_1/u_0 + p_ij;
             F[2][i][j] = u_1*u_2/u_0;
-            F[3][i][j] = u_1*(u_3 + p[i][j])/u_0;
+            F[3][i][j] = u_1*(u_3 + p_ij)/u_0;
             G[0][i][j] = u_2;
             G[1][i][j] = u_1*u_2/u_0;
-            G[2][i][j] = u_2*u_2/u_0 + p[i][j];
-            G[3][i][j] = u_2*(u_3 + p[i][j])/u_0;
+            G[2][i][j] = u_2*u_2/u_0 + p_ij;
+            G[3][i][j] = u_2*(u_3 + p_ij)/u_0;
+            
         }
     }
+    
+    
     //~ writeOutput(F);
     
     //~ double eps2pi12(omega);
@@ -592,17 +601,17 @@ void spaceInt(const std::vector<std::vector<std::vector<double> > > &u,
                 double Gmj12 = 0.5*(G[var][i][j] + G[var][i][jm])*dsi_y[i][j];
                 double Gpj12 = 0.5*(G[var][i][j] + G[var][i][jp])*dsi_y[i][j+1];
                 
-                //~ if (i==0 && var==1){
-                    //~ std::cout << "j = " << j << std::endl;
-                    //~ std::cout << "Fmi12 = " << Fmi12 << std::endl;
-                    //~ std::cout << "Fpi12 = " << Fpi12 << std::endl;
-                    //~ std::cout << "Fmj12 = " << Fmj12 << std::endl;
-                    //~ std::cout << "Fpj12 = " << Fpj12 << std::endl;
-                    //~ std::cout << "Gmi12 = " << Gmi12 << std::endl;
-                    //~ std::cout << "Gpi12 = " << Gpi12 << std::endl;
-                    //~ std::cout << "Gmj12 = " << Gmj12 << std::endl;
-                    //~ std::cout << "Gpj12  = " << Gpj12 << std::endl;
-                //~ }
+                if (j==u[0][0].size()-3 && var==1){
+                    std::cout << "i = " << i << std::endl;
+                    std::cout << "Fmi12 = " << Fmi12 << std::endl;
+                    std::cout << "Fpi12 = " << Fpi12 << std::endl;
+                    std::cout << "Fmj12 = " << Fmj12 << std::endl;
+                    std::cout << "Fpj12 = " << Fpj12 << std::endl;
+                    std::cout << "Gmi12 = " << Gmi12 << std::endl;
+                    std::cout << "Gpi12 = " << Gpi12 << std::endl;
+                    std::cout << "Gmj12 = " << Gmj12 << std::endl;
+                    std::cout << "Gpj12  = " << Gpj12 << std::endl;
+                }
                 // Air foil boundary flux condition
                 if (j==0) {
                     if (var == 0 || var == 3) {
@@ -946,6 +955,8 @@ int main()
         std::vector< std::vector< std::vector<double> > > u_4(u);
         std::vector< std::vector< std::vector<double> > > r(u);
         
+        //~ setExteriorBC(u, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        
         // First RK step
         // Calculate residual
         spaceInt(u, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
@@ -954,46 +965,46 @@ int main()
         double alpha = 0.25;
         tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_1);
         
-        setExteriorBC(u_1, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        //~ setExteriorBC(u_1, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         
         
-        // Second RK step
-        // Calculate residual using u_1
-        spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
-        // Calculate RK step
-        alpha = 1./3.;
+        //~ // Second RK step
+        //~ // Calculate residual using u_1
+        //~ spaceInt(u_1, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma); 
+        //~ // Calculate RK step
+        //~ alpha = 1./3.;
         
-        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
+        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_2);
         
-        setExteriorBC(u_2, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        //~ setExteriorBC(u_2, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
        
 
-        // Third RK step
-        // Calculate residual using u_2
-        spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
-        // Calculate RK step
-        alpha = 0.5;
-        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
+        //~ // Third RK step
+        //~ // Calculate residual using u_2
+        //~ spaceInt(u_2, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
+        //~ // Calculate RK step
+        //~ alpha = 0.5;
+        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_3);
         
-        setExteriorBC(u_3, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        //~ setExteriorBC(u_3, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         
-        // Fourth RK step
-        // Calculate residual using u_3
-        spaceInt(u_3, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
-        // Calculate RK step
-        alpha = 1.;
-        tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);
+        //~ // Fourth RK step
+        //~ // Calculate residual using u_3
+        //~ spaceInt(u_3, omega, dsi_x, dsi_y, dsj_x, dsj_y, r, gamma);
+        //~ // Calculate RK step
+        //~ alpha = 1.;
+        //~ tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_4);
         
-        setExteriorBC(u_4, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        //~ setExteriorBC(u_4, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         
-        writeOutput(u_4);
+        writeOutput(u_1);
 
         //~ // Apply boundary conditions
         //~ setExteriorBC(u_4, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         //~ setAirfoilBC(u, dsi_x, dsi_y);
         
         // Update original vector u
-        u = u_1;
+        u = u_4;
         //~ writeOutput(u_1);
         // Calculate total residual
         R = 1.0e-7;

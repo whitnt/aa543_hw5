@@ -970,7 +970,7 @@ int main()
         double alpha = 0.25;
         tempInt(u, r, dsi_x, dsi_y, dsj_x, dsj_y, alpha, u_1);
         
-        //~ setExteriorBC(u_1, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
+        setExteriorBC(u_1, dsi_x, dsi_y, dsj_x, dsj_y, N_col, u_0, c_0, rho_0, p_0, gamma);
         
         
         //~ // Second RK step

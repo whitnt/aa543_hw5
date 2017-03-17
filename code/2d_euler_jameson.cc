@@ -171,7 +171,7 @@ void setIC(std::vector< std::vector< std::vector<double> > > &u,
             u[0][i][j] = rho_0;
             u[1][i][j] = rho_0*u_0;
             u[2][i][j] = rho_0*v_0;
-            u[3][i][j] = 1./(gamma - 1.)*p_0/rho_0 + (u_0*u_0 + v_0*v_0)/2.;
+            u[3][i][j] = 1./(gamma - 1.)*p_0 + rho_0*(u_0*u_0 + v_0*v_0)/2.;
             //~ std::cout << u[0][i][j] << u[1][i][j] << u[3][i][j] << std::endl;
         }
     }
@@ -196,8 +196,7 @@ void writeOutput(const std::vector<std::vector<std::vector<double> > > &u)
             rho_u   << u[1][i][j] << std::endl;
             rho_v   << u[2][i][j] << std::endl;
             rho_E   << u[3][i][j] << std::endl;
-
-                
+            
         }
     }
                 
@@ -749,12 +748,6 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     // Normalize "j" unit vectors
     norm = sqrt(dsi_x[i][J_max - 3]*dsi_x[i][J_max - 3]
 		+ dsi_y[i][J_max - 3]*dsi_y[i][J_max - 3]);
-        
-    std::cout << "i = " << i << std::endl;
-    std::cout << "norm = " << norm << std::endl;
-    std::cout << "dsi_x =  " << dsi_x[i][J_max - 3] << std::endl;
-    std::cout << "nx = " << nx << std::endl;
-    std::cout << "ny = " << ny << std::endl;
     
     nx = -1.0*dsi_x[i][J_max - 3]/norm; // Reverse for convention
     ny = -1.0*dsi_y[i][J_max - 3]/norm; // Reverse for convention
@@ -765,6 +758,8 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     // Check for inflow or outflow
     uvel = u[1][i][J_max - 3]/u[0][i][J_max - 3];
     vvel = u[2][i][J_max - 3]/u[0][i][J_max - 3];
+
+    std::cout << "uvel = " << uvel << std::endl;
     
     // Compute u dot n (normal component of velocity)
     uin = uvel*nx + vvel*ny; // interior
@@ -775,8 +770,11 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
     u0t = u_0*ny; // infty
     
     // Compute interior speed of sound
-    ci = sqrt(gamma*(gamma - 1)*(u[3][i][J_max - 3]/u[0][i][J_max - 3]
-			   - 0.5*(uvel*uvel + vvel*vvel)));
+    ci = sqrt(gamma*(gamma - 1)*(
+	      u[3][i][J_max - 3]/u[0][i][J_max - 3]
+	      - 0.5*(uvel*uvel + vvel*vvel)));
+    
+    std::cout << "ci = " << ci << std::endl;
     
     // Compute interior pressure
     pi = u[0][i][J_max - 3]*ci*ci/gamma;
@@ -787,6 +785,12 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
       // and R_int (interior, minus)
       R_inf = abs(u0n) + 2.0/(gamma - 1.0)*c_0;
       R_int = abs(uin) - 2.0/(gamma - 1.0)*ci;
+      
+      // Compute Primitive Boundary Values
+      unb = 0.5*(R_inf + R_int);
+      cb = 0.25*(gamma - 1.0)*(R_inf - R_int);
+      rhob = pow(cb*cb*pow(rho_0, gamma)/(gamma*p_0), 1./(gamma - 1.0));
+      pb = rhob*cb*cb/gamma;
     }
     
     if (uin < 0) { // outflow BC
@@ -794,14 +798,15 @@ void setExteriorBC(std::vector< std::vector< std::vector<double> > > &u,
       // and R_int (interior, plus)
       R_inf = -1.0*abs(u0n) - 2.0/(gamma - 1.0)*c_0;
       R_int = -1.0*abs(uin) + 2.0/(gamma - 1.0)*ci;
+      
+      // Compute Primitive Boundary Values
+      unb = -0.5*(R_inf + R_int);
+      cb = -0.25*(gamma - 1.0)*(R_inf - R_int);
+      rhob = pow(cb*cb*pow(rho_0, gamma)/(gamma*p_0), 1./(gamma - 1.0));
+      pb = rhob*cb*cb/gamma;
     }
     
-    // Compute Primitive Boundary Values
-    unb = 0.5*(R_inf + R_int);
-    cb = 0.25*(gamma - 1.0)*(R_inf - R_int);
-    rhob = pow(cb*cb*pow(rho_0, gamma)/(gamma*p_0), 1./(gamma - 1.0));
-    pb = rhob*cb*cb/gamma;
-    
+        
     std::cout << "c_b = " << cb << std::endl;
     std::cout << "u0t = " << u0t << std::endl;
     std::cout << "unb = " << unb << std::endl;
